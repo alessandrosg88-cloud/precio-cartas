@@ -78,7 +78,7 @@
 const HELP = {
   pokemon: {
     text: 'Usa el <b>código del set + número</b> que aparece abajo de la carta (ej. <b>PAL 125</b>), el id (<b>sv3-125</b>) o el nombre.',
-    ex: ['PAL 125', 'sv3-125', 'base1-4', 'Charizard']
+    ex: ['OBF 125', 'sv3-125', 'base1-4', 'Pikachu']
   },
   yugioh: {
     text: 'Usa el <b>código impreso</b> debajo de la imagen, a la derecha (ej. <b>LOB-EN001</b>). También vale en español (<b>LOB-SP001</b>) o el nombre en inglés.',
@@ -104,7 +104,7 @@ function showHelp(){
 
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
-  t.classList.add('on'); game = t.dataset.game; out.innerHTML = ''; showHelp(); $('q').focus();
+  t.classList.add('on'); game = t.dataset.game; out.innerHTML = ''; $('q').value = ''; showHelp(); $('q').focus();
 });
 $('form').onsubmit = e => { e.preventDefault(); search(); };
 
@@ -113,11 +113,19 @@ const usd = v => (v == null || v === '' || Number(v) === 0) ? null : '$' + Numbe
 const eur = v => (v == null || v === '' || Number(v) === 0) ? null : Number(v).toFixed(2).replace('.', ',') + ' €';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-async function getJSON(url){
-  const r = await fetch(url);
-  if (r.status === 404) return null;
-  if (!r.ok) throw new Error('Error ' + r.status);
-  return r.json();
+// Pide datos a la API; si falla, reintenta hasta 3 veces
+async function getJSON(url, tries = 3){
+  for (let i = 1; ; i++) {
+    try {
+      const r = await fetch(url);
+      if (r.status === 404 || r.status === 400) return null;
+      if (!r.ok) throw new Error('Error ' + r.status);
+      return await r.json();
+    } catch (e) {
+      if (i >= tries) throw e;
+      await new Promise(ok => setTimeout(ok, 800 * i));
+    }
+  }
 }
 
 function loading(){ out.innerHTML = '<div class="msg">Buscando…</div>'; }
@@ -174,15 +182,24 @@ async function search(){
 
 // ---------- POKÉMON (pokemontcg.io) ----------
 const PKM = 'https://api.pokemontcg.io/v2/cards';
-async function searchPokemon(q){
-  let m;
-  if (/^[a-z0-9.]+-[a-z0-9]+$/i.test(q)) {                         // id: sv3-125
-    const r = await getJSON(`${PKM}/${q.toLowerCase()}`);
-    if (r) return showPokemon(r.data);
+let pkmSets = null; // código impreso (PAL) -> ids de la API (sv2)
+async function pokemonSetIds(code){
+  if (!pkmSets) {
+    const r = await getJSON('https://api.pokemontcg.io/v2/sets?select=id,ptcgoCode&pageSize=250');
+    pkmSets = {};
+    for (const s of r?.data || []) if (s.ptcgoCode) (pkmSets[s.ptcgoCode.toUpperCase()] ||= []).push(s.id);
   }
-  let query;
-  if ((m = q.match(/^([a-z0-9]{2,5})\s+0*(\w+?)(?:\/\d+)?$/i))) {   // PAL 125 o PAL 125/193
-    query = `set.ptcgoCode:${m[1].toUpperCase()} number:${m[2]}`;
+  return pkmSets[code.toUpperCase()] || [];
+}
+
+async function searchPokemon(q){
+  let m, query;
+  if (/^[a-z0-9.]+-[a-z0-9]+$/i.test(q)) {                          // id: sv3-125
+    query = `id:${q.toLowerCase()}`;
+  } else if ((m = q.match(/^([a-z0-9-]{2,6})\s+0*(\w+?)(?:\/\d+)?$/i))) { // PAL 125 o PAL 125/193
+    const ids = await pokemonSetIds(m[1]);
+    if (!ids.length) return error(`No conozco el set "${esc(m[1].toUpperCase())}". Revisa el código.`);
+    query = `(${ids.map(id => 'set.id:' + id).join(' OR ')}) number:${m[2]}`;
   } else {
     query = `name:"${q.replace(/"/g, '')}*"`;
   }
