@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precio Cartas</title>
+<style>
+  :root{
+    --bg:#f4f5f8; --card:#ffffff; --text:#1c1f26; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#2563eb; --accent-soft:#e8efff; --good:#059669; --bad:#dc2626;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0f1115; --card:#181b22; --text:#eef0f4; --muted:#9aa3b2; --line:#2a2f3a;
+      --accent:#5b8cff; --accent-soft:#1d2840; --good:#34d399; --bad:#f87171; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.45}
+  .wrap{max-width:860px;margin:0 auto;padding:28px 16px 60px}
+  h1{font-size:30px;margin:0 0 4px;text-align:center}
+  .sub{color:var(--muted);text-align:center;margin:0 0 24px}
+  .tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+  .tab{border:1px solid var(--line);background:var(--card);color:var(--text);padding:10px 18px;border-radius:999px;font-size:16px;cursor:pointer}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  form{display:flex;gap:8px}
+  input{flex:1;min-width:0;font-size:18px;padding:14px 16px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--text)}
+  input:focus{outline:none;border-color:var(--accent)}
+  button.go{font-size:18px;padding:0 22px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+  .help{background:var(--accent-soft);border-radius:12px;padding:12px 16px;margin:14px 0 22px;font-size:15px}
+  .help b{font-family:ui-monospace,Menlo,monospace}
+  .ex{display:inline-block;margin:4px 6px 0 0;padding:3px 10px;border-radius:8px;background:var(--card);border:1px solid var(--line);cursor:pointer;font-family:ui-monospace,Menlo,monospace;font-size:14px;color:var(--text)}
+  .msg{text-align:center;color:var(--muted);padding:24px}
+  .msg.err{color:var(--bad)}
+  .result{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;grid-template-columns:240px 1fr;gap:22px}
+  .result img{width:100%;border-radius:10px}
+  .name{font-size:24px;font-weight:700;margin:0}
+  .meta{color:var(--muted);margin:4px 0 16px}
+  .big{background:var(--accent-soft);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+  .big .lbl{font-size:14px;color:var(--muted)}
+  .big .val{font-size:40px;font-weight:800;color:var(--good)}
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  td{padding:8px 4px;border-bottom:1px solid var(--line)}
+  td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+  .sec{font-weight:700;padding-top:14px;color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+  .links a{display:inline-block;margin:14px 8px 0 0;padding:8px 14px;border-radius:10px;border:1px solid var(--line);color:var(--accent);text-decoration:none;font-weight:600}
+  .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;cursor:pointer;text-align:center;font-size:13px;color:var(--text)}
+  .item img{width:100%;border-radius:6px}
+  .item:hover{border-color:var(--accent)}
+  .back{background:none;border:0;color:var(--accent);cursor:pointer;font-size:15px;margin-bottom:10px;padding:0}
+  footer{color:var(--muted);font-size:13px;text-align:center;margin-top:30px}
+  @media (max-width:620px){ .result{grid-template-columns:1fr} .result img{max-width:260px;margin:0 auto;display:block} .big .val{font-size:34px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔎 Precio Cartas</h1>
+  <p class="sub">Escribe el código de tu carta y mira cuánto vale.</p>
+
+  <div class="tabs">
+    <button class="tab on" data-game="pokemon">Pokémon</button>
+    <button class="tab" data-game="yugioh">Yu-Gi-Oh!</button>
+    <button class="tab" data-game="magic">Magic</button>
+  </div>
+
+  <form id="form">
+    <input id="q" autocomplete="off" placeholder="Código o nombre de la carta">
+    <button class="go">Buscar</button>
+  </form>
+
+  <div class="help" id="help"></div>
+  <div id="out"></div>
+
+  <footer>Datos: pokemontcg.io · ygoprodeck.com · scryfall.com — los precios son orientativos.</footer>
+</div>
+
+<script>
+// ===================== AYUDA POR JUEGO =====================
+const HELP = {
+  pokemon: {
+    text: 'Usa el <b>código del set + número</b> que aparece abajo de la carta (ej. <b>PAL 125</b>), el id (<b>sv3-125</b>) o el nombre.',
+    ex: ['PAL 125', 'sv3-125', 'base1-4', 'Charizard']
+  },
+  yugioh: {
+    text: 'Usa el <b>código impreso</b> debajo de la imagen, a la derecha (ej. <b>LOB-EN001</b>). También vale en español (<b>LOB-SP001</b>) o el nombre en inglés.',
+    ex: ['LOB-EN001', 'SDY-006', 'Dark Magician']
+  },
+  magic: {
+    text: 'Usa el <b>código del set + número</b> de abajo a la izquierda (ej. <b>MH3 123</b>) o el nombre (en inglés).',
+    ex: ['MH3 123', 'LEA 232', 'Lightning Bolt']
+  }
+};
+
+let game = 'pokemon';
+let lastList = null;
+const $ = id => document.getElementById(id);
+const out = $('out');
+
+function showHelp(){
+  const h = HELP[game];
+  $('help').innerHTML = h.text + '<br>Ejemplos: ' +
+    h.ex.map(e => `<span class="ex">${e}</span>`).join('');
+  $('help').querySelectorAll('.ex').forEach(el => el.onclick = () => { $('q').value = el.textContent; search(); });
+}
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  t.classList.add('on'); game = t.dataset.game; out.innerHTML = ''; showHelp(); $('q').focus();
+});
+$('form').onsubmit = e => { e.preventDefault(); search(); };
+
+// ===================== UTILIDADES =====================
+const usd = v => (v == null || v === '' || Number(v) === 0) ? null : '$' + Number(v).toFixed(2);
+const eur = v => (v == null || v === '' || Number(v) === 0) ? null : Number(v).toFixed(2).replace('.', ',') + ' €';
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function getJSON(url){
+  const r = await fetch(url);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('Error ' + r.status);
+  return r.json();
+}
+
+function loading(){ out.innerHTML = '<div class="msg">Buscando…</div>'; }
+function error(t){ out.innerHTML = `<div class="msg err">${t}</div>`; }
+
+// Dibuja una carta. rows = [[etiqueta, valor] | ['#Sección']]
+function render({img, name, meta, mainLabel, mainValue, rows, links}){
+  const isSec = r => r[0].startsWith('#');
+  const kept = rows.filter(r => isSec(r) || r[1]);
+  // quita los títulos de sección que se quedaron sin precios debajo
+  const clean = kept.filter((r, i) => !isSec(r) || (kept[i + 1] && !isSec(kept[i + 1])));
+  const tr = clean.map(r => isSec(r)
+    ? `<tr><td class="sec" colspan="2">${r[0].slice(1)}</td></tr>`
+    : `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  out.innerHTML = `
+    ${lastList ? '<button class="back" id="back">← Volver a los resultados</button>' : ''}
+    <div class="result">
+      <div>${img ? `<img src="${img}" alt="${esc(name)}">` : ''}</div>
+      <div>
+        <p class="name">${esc(name)}</p>
+        <p class="meta">${meta}</p>
+        <div class="big"><div class="lbl">${mainLabel}</div><div class="val">${mainValue || 'Sin precio'}</div></div>
+        <table>${tr || '<tr><td>No hay más precios disponibles</td><td></td></tr>'}</table>
+        <div class="links">${links.filter(l => l[1]).map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${l[0]} ↗</a>`).join('')}</div>
+      </div>
+    </div>`;
+  if (lastList) $('back').onclick = () => renderList(lastList);
+}
+
+// Lista de resultados cuando hay varias cartas
+function renderList(list){
+  lastList = list;
+  out.innerHTML = `<p class="msg">${list.items.length} resultados — toca una carta</p>
+    <div class="list">${list.items.map((it, i) =>
+      `<div class="item" data-i="${i}">${it.img ? `<img src="${it.img}" loading="lazy">` : ''}<div>${esc(it.title)}</div></div>`).join('')}</div>`;
+  out.querySelectorAll('.item').forEach(el => el.onclick = () => list.open(list.items[el.dataset.i].data));
+}
+
+// ===================== BÚSQUEDA =====================
+async function search(){
+  const q = $('q').value.trim();
+  if (!q) return;
+  lastList = null;
+  loading();
+  try {
+    if (game === 'pokemon') await searchPokemon(q);
+    if (game === 'yugioh') await searchYugioh(q);
+    if (game === 'magic')  await searchMagic(q);
+  } catch (e) {
+    error('No se pudo conectar con la base de datos. Inténtalo de nuevo en unos segundos.');
+    console.error(e);
+  }
+}
+
+// ---------- POKÉMON (pokemontcg.io) ----------
+const PKM = 'https://api.pokemontcg.io/v2/cards';
+async function searchPokemon(q){
+  let m;
+  if (/^[a-z0-9.]+-[a-z0-9]+$/i.test(q)) {                         // id: sv3-125
+    const r = await getJSON(`${PKM}/${q.toLowerCase()}`);
+    if (r) return showPokemon(r.data);
+  }
+  let query;
+  if ((m = q.match(/^([a-z0-9]{2,5})\s+0*(\w+?)(?:\/\d+)?$/i))) {   // PAL 125 o PAL 125/193
+    query = `set.ptcgoCode:${m[1].toUpperCase()} number:${m[2]}`;
+  } else {
+    query = `name:"${q.replace(/"/g, '')}*"`;
+  }
+  const r = await getJSON(`${PKM}?q=${encodeURIComponent(query)}&orderBy=-set.releaseDate&pageSize=60`);
+  const cards = r?.data || [];
+  if (!cards.length) return error('No encontré esa carta. Revisa el código (ej. PAL 125).');
+  if (cards.length === 1) return showPokemon(cards[0]);
+  renderList({ open: showPokemon, items: cards.map(c => ({
+    img: c.images?.small, title: `${c.name} · ${c.set.name} ${c.number}`, data: c })) });
+}
+
+function showPokemon(c){
+  const tp = c.tcgplayer?.prices || {}, cm = c.cardmarket?.prices || {};
+  const NAMES = { normal:'Normal', holofoil:'Holo', reverseHolofoil:'Reverse Holo',
+    '1stEditionHolofoil':'1ª Edición Holo', '1stEditionNormal':'1ª Edición', unlimitedHolofoil:'Unlimited Holo' };
+  const rows = [['#Cardmarket (Europa)'],
+    ['Tendencia', eur(cm.trendPrice)], ['Precio medio de venta', eur(cm.averageSellPrice)],
+    ['Desde', eur(cm.lowPrice)], ['Media 7 días', eur(cm.avg7)], ['Media 30 días', eur(cm.avg30)],
+    ['Reverse Holo (tendencia)', eur(cm.reverseHoloTrend)],
+    ['#TCGplayer (EE. UU.)']];
+  for (const [k, p] of Object.entries(tp)) rows.push([`${NAMES[k] || k} — mercado`, usd(p.market) || usd(p.mid)]);
+  const main = eur(cm.trendPrice) || eur(cm.averageSellPrice);
+  const firstTp = Object.values(tp)[0];
+  render({
+    img: c.images?.large || c.images?.small, name: c.name,
+    meta: `${esc(c.set.name)} · Nº ${esc(c.number)}/${esc(c.set.printedTotal)} · ${esc(c.rarity || '')}`,
+    mainLabel: main ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
+    mainValue: main || usd(firstTp?.market || firstTp?.mid),
+    rows, links: [['Cardmarket', c.cardmarket?.url], ['TCGplayer', c.tcgplayer?.url]]
+  });
+}
+
+// ---------- YU-GI-OH! (ygoprodeck.com) ----------
+const YGO = 'https://db.ygoprodeck.com/api/v7';
+async function searchYugioh(q){
+  const m = q.toUpperCase().replace(/\s+/g, '').match(/^([A-Z0-9]+)-([A-Z]{0,2})(\d+)$/);
+  if (m) {
+    // Prueba el código tal cual y, si no, su versión en inglés (SP→EN, etc.)
+    const tries = [q.toUpperCase().replace(/\s+/g, ''), `${m[1]}-EN${m[3]}`, `${m[1]}-${m[3]}`];
+    for (const code of [...new Set(tries)]) {
+      const info = await getJSON(`${YGO}/cardsetsinfo.php?setcode=${encodeURIComponent(code)}`).catch(() => null);
+      if (info && info.id) {
+        const card = (await getJSON(`${YGO}/cardinfo.php?id=${info.id}`))?.data?.[0];
+        return showYugioh(card, code);
+      }
+    }
+    return error('No encontré ese código. Revisa que esté bien escrito (ej. LOB-EN001).');
+  }
+  const r = await getJSON(`${YGO}/cardinfo.php?fname=${encodeURIComponent(q)}`);
+  const cards = r?.data || [];
+  if (!cards.length) return error('No encontré esa carta. Prueba con el código o el nombre en inglés.');
+  if (cards.length === 1) return showYugioh(cards[0]);
+  renderList({ open: c => showYugioh(c), items: cards.slice(0, 60).map(c => ({
+    img: c.card_images?.[0]?.image_url_small, title: c.name, data: c })) });
+}
+
+function showYugioh(c, code){
+  const p = c.card_prices?.[0] || {};
+  const set = code && (c.card_sets || []).find(s => s.set_code.toUpperCase() === code);
+  const rows = [];
+  if (set) rows.push(['#Esta edición'], [`${set.set_code} (${set.set_rarity})`, usd(set.set_price)]);
+  rows.push(['#Precio general de la carta'],
+    ['Cardmarket', eur(p.cardmarket_price)], ['TCGplayer', usd(p.tcgplayer_price)],
+    ['eBay', usd(p.ebay_price)], ['Amazon', usd(p.amazon_price)], ['CoolStuffInc', usd(p.coolstuffinc_price)]);
+  const main = set ? usd(set.set_price) : eur(p.cardmarket_price);
+  render({
+    img: c.card_images?.[0]?.image_url, name: c.name,
+    meta: set ? `${esc(set.set_name)} · ${esc(set.set_code)} · ${esc(set.set_rarity)}` : esc(c.type),
+    mainLabel: set ? 'Precio de esta edición (TCGplayer)' : 'Precio más bajo en Cardmarket',
+    mainValue: main || eur(p.cardmarket_price) || usd(p.tcgplayer_price),
+    rows,
+    links: [['Cardmarket', `https://www.cardmarket.com/es/YuGiOh/Products/Search?searchString=${encodeURIComponent(c.name)}`],
+            ['TCGplayer', `https://www.tcgplayer.com/search/yugioh/product?q=${encodeURIComponent(c.name)}`],
+            ['Ficha', c.ygoprodeck_url]]
+  });
+}
+
+// ---------- MAGIC (scryfall.com) ----------
+const MTG = 'https://api.scryfall.com';
+async function searchMagic(q){
+  const m = q.match(/^([a-z0-9]{2,6})\s*[\s\-\/#]\s*([0-9a-z★]+)$/i);
+  if (m) {
+    const c = await getJSON(`${MTG}/cards/${m[1].toLowerCase()}/${m[2].toLowerCase()}`);
+    if (c) return showMagic(c);
+  }
+  const r = await getJSON(`${MTG}/cards/search?unique=prints&order=released&q=${encodeURIComponent(q)}`);
+  const cards = r?.data || [];
+  if (!cards.length) return error('No encontré esa carta. Revisa el código (ej. MH3 123) o el nombre en inglés.');
+  if (cards.length === 1) return showMagic(cards[0]);
+  renderList({ open: showMagic, items: cards.slice(0, 60).map(c => ({
+    img: mtgImg(c, 'small'), title: `${c.name} · ${c.set.toUpperCase()} ${c.collector_number}`, data: c })) });
+}
+const mtgImg = (c, size) => c.image_uris?.[size] || c.card_faces?.[0]?.image_uris?.[size];
+
+function showMagic(c){
+  const p = c.prices || {};
+  const main = eur(p.eur) || usd(p.usd) || eur(p.eur_foil) || usd(p.usd_foil);
+  render({
+    img: mtgImg(c, 'normal'), name: c.name,
+    meta: `${esc(c.set_name)} · ${esc(c.set.toUpperCase())} ${esc(c.collector_number)} · ${esc(c.rarity)}`,
+    mainLabel: eur(p.eur) ? 'Precio en Cardmarket' : 'Precio de referencia',
+    mainValue: main,
+    rows: [['#Cardmarket (Europa)'], ['Normal', eur(p.eur)], ['Foil', eur(p.eur_foil)],
+           ['#TCGplayer (EE. UU.)'], ['Normal', usd(p.usd)], ['Foil', usd(p.usd_foil)], ['Etched', usd(p.usd_etched)]],
+    links: [['Cardmarket', c.purchase_uris?.cardmarket], ['TCGplayer', c.purchase_uris?.tcgplayer], ['Scryfall', c.scryfall_uri]]
+  });
+}
+
+showHelp();
+</script>
+</body>
+</html>
