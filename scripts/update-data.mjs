@@ -191,18 +191,37 @@ function matchCardmarket(tcg, cm){
   return `${matched} (descartadas por precio dudoso: ${rejected})`;
 }
 
-// Une cada producto sellado de TCGplayer con el de Cardmarket por su nombre
-function matchSealed(list, cm){
-  const key = s => norm(s).replace(/\b(english|en|the|of|tcg|card game|pokemon|yu gi oh|magic gathering|mtg)\b/g, ' ').replace(/\s+/g, ' ').trim();
-  const byName = {};
-  for (const p of cm.nonsingles) { const pg = cm.prices[p.idProduct]; if (pg && cmPrice(pg)) (byName[key(p.name)] ||= []).push(p); }
+// Une cada producto sellado de TCGplayer con el de Cardmarket.
+// Los nombres no son iguales ("Booster Box" vs "Booster Display"), así que comparamos las palabras
+// importantes (la expansión) dentro del mismo tipo de producto y nos quedamos con el más parecido.
+const STOP = new Set(['booster','box','display','pack','packs','case','the','of','and','english','en','tcg','card','game','set',
+  'pokemon','yu','gi','oh','magic','gathering','mtg','sealed','trading','cards','edition','1st','unlimited','a','de']);
+const words = s => new Set(norm(s.replace(/&/g, ' and ')).split(' ').filter(w => w && !STOP.has(w)));
+function matchSealed(list, cm, sets = {}){
+  const cands = cm.nonsingles.filter(p => cmPrice(cm.prices[p.idProduct]))
+    .map(p => ({ p, t: sealedType(p.name), w: words(p.name) }));
+  const index = {};
+  for (const c of cands) for (const w of c.w) (index[c.t + '|' + w] ||= []).push(c);
   let n = 0;
   for (const s of list) {
-    const cand = byName[key(s.n)]; if (!cand) continue;
-    const p = cand[0], pg = cm.prices[p.idProduct], e = cmPrice(pg);
+    let w = words(s.n);
+    if (w.size < 2) w = words(s.n + ' ' + (sets[s.g]?.n || '')); // "Booster Pack" -> añade el nombre de la expansión
+    if (!w.size) continue;
+    const seen = new Set(); let best = null, bestScore = 0;
+    for (const x of w) for (const c of index[s.t + '|' + x] || []) {
+      if (seen.has(c)) continue; seen.add(c);
+      let inter = 0; for (const y of w) if (c.w.has(y)) inter++;
+      const score = inter / (w.size + c.w.size - inter);
+      if (score > bestScore) { bestScore = score; best = c; }
+    }
+    if (!best || bestScore < 0.6) continue;
+    const pg = cm.prices[best.p.idProduct], e = cmPrice(pg);
     if (s.u && Math.max(e, s.u) > 5 && (e / s.u > 2.5 || e / s.u < 0.4)) continue; // precio muy distinto: dudoso
-    s.cm = p.idProduct; s.e = r2(e); s.el = r2(pg.low); s.e30 = r2(pg.avg30); n++;
+    s.cm = best.p.idProduct; s.e = r2(e); s.el = r2(pg.low); s.e30 = r2(pg.avg30); n++;
   }
+  const ej = list.filter(s => s.t === 'box').slice(0, 3).map(s => s.n).join(' | ');
+  const ejc = cands.filter(c => c.t === 'box').slice(0, 3).map(c => c.p.name).join(' | ');
+  console.log(`   Ejemplos TCG: ${ej}\n   Ejemplos CM: ${ejc}`);
   return n;
 }
 
@@ -224,7 +243,7 @@ for (const [key, G] of Object.entries(GAMES)) {
       const cm = await loadCardmarket(G.cm);
       cmUpdated = cm.updated;
       if (!G.sealedOnly) console.log(`   Emparejadas con Cardmarket: ${matchCardmarket(all, cm)}`);
-      console.log(`   Sellados: ${all.sealed.length}, con precio Cardmarket: ${matchSealed(all.sealed, cm)}`);
+      console.log(`   Sellados: ${all.sealed.length}, con precio Cardmarket: ${matchSealed(all.sealed, cm, all.sealedSets)}`);
     } catch (e) { console.log('   ⚠️ Cardmarket no disponible:', e.message); }
     await writeFile(`data/sealed/${key}.json`, JSON.stringify({ updated: new Date().toISOString(), cmUpdated, sets: all.sealedSets, items: all.sealed }));
     if (G.sealedOnly) continue;
