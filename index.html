@@ -101,15 +101,15 @@
   <div class="help" id="help"></div>
   <div id="out"></div>
 
-  <footer>Datos: pokemontcg.io · ygoprodeck.com · scryfall.com — los precios son orientativos.</footer>
+  <footer>Datos: tcgdex.net · ygoprodeck.com · scryfall.com — los precios son orientativos.</footer>
 </div>
 
 <script>
 // ===================== AYUDA POR JUEGO =====================
 const HELP = {
   pokemon: {
-    text: 'Usa el <b>código del set + número</b> que aparece abajo de la carta (ej. <b>PAL 125</b>), el id (<b>sv3-125</b>) o el nombre.',
-    ex: ['OBF 125', 'sv3-125', 'base1-4', 'Pikachu']
+    text: 'Usa el <b>código del set + número</b> que aparece abajo de la carta (ej. <b>OBF 125</b>), solo el número (<b>125/197</b>) o el nombre en inglés.',
+    ex: ['OBF 125', '125/197', 'base1-4', 'Pikachu']
   },
   yugioh: {
     text: 'Usa el <b>código impreso</b> debajo de la imagen, a la derecha (ej. <b>LOB-EN001</b>). También vale en español (<b>LOB-SP001</b>) o el nombre en inglés.',
@@ -142,11 +142,11 @@ $('form').onsubmit = e => { e.preventDefault(); search(); };
 // ===================== UTILIDADES =====================
 const usd = v => (v == null || v === '' || Number(v) === 0) ? null : '$' + Number(v).toFixed(2);
 const eur = v => (v == null || v === '' || Number(v) === 0) ? null : Number(v).toFixed(2).replace('.', ',') + ' €';
-const fecha = d => d ? new Date(d.replace(/\//g, '-')).toLocaleDateString('es-ES') : '';
+const fecha = d => d ? new Date(d).toLocaleDateString('es-ES') : '';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // Pide datos a la API; si falla, reintenta hasta 3 veces
-async function getJSON(url, tries = 3){
+async function getJSON(url, tries = 4){
   for (let i = 1; ; i++) {
     try {
       const r = await fetch(url, { cache: 'no-store' }); // siempre precio nuevo
@@ -218,59 +218,78 @@ async function search(){
   }
 }
 
-// ---------- POKÉMON (pokemontcg.io) ----------
-const PKM = 'https://api.pokemontcg.io/v2/cards';
-let pkmSets = null; // código impreso (PAL) -> ids de la API (sv2)
+// ---------- POKÉMON (tcgdex.net — precios de Cardmarket actualizados a diario) ----------
+const PKM = 'https://api.tcgdex.net/v2/en';
+const pkmImg = (c, q) => c.image ? `${c.image}/${q}.webp` : '';
+const pkmSets = {}; // código impreso (OBF) -> ids de sets (sv03)
 async function pokemonSetIds(code){
-  if (!pkmSets) {
-    const r = await getJSON('https://api.pokemontcg.io/v2/sets?select=id,ptcgoCode&pageSize=250');
-    pkmSets = {};
-    for (const s of r?.data || []) if (s.ptcgoCode) (pkmSets[s.ptcgoCode.toUpperCase()] ||= []).push(s.id);
-  }
-  return pkmSets[code.toUpperCase()] || [];
+  code = code.toUpperCase();
+  if (!pkmSets[code]) pkmSets[code] = ((await getJSON(`${PKM}/sets?abbreviation.official=${encodeURIComponent(code)}`)) || []).map(s => s.id);
+  return pkmSets[code];
+}
+// Busca la carta número "num" dentro de varios sets
+async function cardsInSets(setIds, num){
+  const n = String(num).replace(/^0+(?=.)/, '');
+  const found = await Promise.all(setIds.map(async id =>
+    (await getJSON(`${PKM}/sets/${id}/${n}`).catch(() => null)) ||
+    (await getJSON(`${PKM}/sets/${id}/${n.padStart(3, '0')}`).catch(() => null))));
+  return found.filter(c => c && c.id);
 }
 
 async function searchPokemon(q){
-  let m, query;
-  if (/^[a-z0-9.]+-[a-z0-9]+$/i.test(q)) {                          // id: sv3-125
-    query = `id:${q.toLowerCase()}`;
+  let m, cards = [];
+  if (/^[a-z0-9.]+-[a-z0-9]+$/i.test(q)) {                               // id: sv03-125
+    const id = q.toLowerCase();
+    const c = await getJSON(`${PKM}/cards/${id}`) ||
+              await getJSON(`${PKM}/cards/${id.replace(/^([a-z]+)(\d)(?=\D)/, '$10$2')}`); // sv3-125 -> sv03-125
+    if (c) cards = [c];
   } else if ((m = q.match(/^0*(\d+)\s*\/\s*0*(\d+)$/))) {                 // 125/197 (sin set)
-    query = `number:${m[1]} set.printedTotal:${m[2]}`;
-  } else if ((m = q.match(/^([a-z0-9-]{2,6})\s+0*(\w+?)(?:\/\d+)?$/i))) { // PAL 125 o PAL 125/193
+    const sets = (await getJSON(`${PKM}/sets?cardCount.official=${m[2]}`)) || [];
+    cards = await cardsInSets(sets.map(s => s.id), m[1]);
+  } else if ((m = q.match(/^([a-z0-9-]{2,6})\s+(\w+?)(?:\/\d+)?$/i))) {   // OBF 125 o OBF 125/197
     const ids = await pokemonSetIds(m[1]);
     if (!ids.length) return error(`No conozco el set "${esc(m[1].toUpperCase())}". Revisa el código.`);
-    query = `(${ids.map(id => 'set.id:' + id).join(' OR ')}) number:${m[2]}`;
-  } else {
-    query = `name:"${q.replace(/"/g, '')}*"`;
+    cards = await cardsInSets(ids, m[2]);
+  } else {                                                                 // nombre
+    const list = (await getJSON(`${PKM}/cards?name=${encodeURIComponent(q)}`)) || [];
+    if (list.length === 1) cards = [await getJSON(`${PKM}/cards/${list[0].id}`)].filter(Boolean);
+    else if (list.length > 1) return renderList({
+      open: async b => { loading(); showPokemon(await getJSON(`${PKM}/cards/${b.id}`)); },
+      items: list.slice(-60).reverse().map(b => ({ img: pkmImg(b, 'low'), title: `${b.name} · ${b.id}`, data: b })) });
   }
-  const r = await getJSON(`${PKM}?q=${encodeURIComponent(query)}&orderBy=-set.releaseDate&pageSize=60`);
-  const cards = r?.data || [];
-  if (!cards.length) return error('No encontré esa carta. Revisa el código (ej. PAL 125).');
+  if (!cards.length) return error('No encontré esa carta. Revisa el código (ej. OBF 125).');
   if (cards.length === 1) return showPokemon(cards[0]);
   renderList({ open: showPokemon, items: cards.map(c => ({
-    img: c.images?.small, title: `${c.name} · ${c.set.name} ${c.number}`, data: c })) });
+    img: pkmImg(c, 'low'), title: `${c.name} · ${c.set.name} ${c.localId}`, data: c })) });
 }
 
 function showPokemon(c){
-  const tp = c.tcgplayer?.prices || {}, cm = c.cardmarket?.prices || {};
-  const NAMES = { normal:'Normal', holofoil:'Holo', reverseHolofoil:'Reverse Holo',
-    '1stEditionHolofoil':'1ª Edición Holo', '1stEditionNormal':'1ª Edición', unlimitedHolofoil:'Unlimited Holo' };
+  const cm = c.pricing?.cardmarket || {}, tp = c.pricing?.tcgplayer || {};
+  const NAMES = { normal:'Normal', holofoil:'Holo', 'reverse-holofoil':'Reverse Holo',
+    '1st-edition-holofoil':'1ª Edición Holo', '1st-edition':'1ª Edición', 'unlimited-holofoil':'Unlimited Holo' };
   const rows = [['#Cardmarket (Europa)'],
-    ['Tendencia', eur(cm.trendPrice)], ['Precio medio de venta', eur(cm.averageSellPrice)],
-    ['Desde', eur(cm.lowPrice)], ['Media 7 días', eur(cm.avg7)], ['Media 30 días', eur(cm.avg30)],
-    ['Reverse Holo (tendencia)', eur(cm.reverseHoloTrend)],
+    ['Tendencia', eur(cm.trend)], ['Precio medio de venta', eur(cm.avg)], ['Desde', eur(cm.low)],
+    ['Media último día', eur(cm.avg1)], ['Media 7 días', eur(cm.avg7)], ['Media 30 días', eur(cm.avg30)],
+    ['Holo / Reverse (tendencia)', eur(cm['trend-holo'])],
     ['#TCGplayer (EE. UU.)']];
-  for (const [k, p] of Object.entries(tp)) rows.push([`${NAMES[k] || k} — mercado`, usd(p.market) || usd(p.mid)]);
-  const main = eur(cm.trendPrice) || eur(cm.averageSellPrice);
-  const firstTp = Object.values(tp)[0];
+  let tpId = null;
+  for (const [k, p] of Object.entries(tp)) {
+    if (!p || typeof p !== 'object') continue;
+    tpId = tpId || p.productId;
+    rows.push([`${NAMES[k] || k} — mercado`, usd(p.marketPrice) || usd(p.midPrice)]);
+  }
+  const main = eur(cm.trend) || eur(cm.avg);
+  const firstTp = Object.values(tp).find(p => p && typeof p === 'object');
   render({
-    img: c.images?.large || c.images?.small, name: c.name,
-    meta: `${esc(c.set.name)} · Nº ${esc(c.number)}/${esc(c.set.printedTotal)} · ${esc(c.rarity || '')}`,
+    img: pkmImg(c, 'high'), name: c.name,
+    meta: `${esc(c.set?.name)} · Nº ${esc(c.localId)}/${esc(c.set?.cardCount?.official ?? '?')} · ${esc(c.rarity || '')}`,
     mainLabel: main ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
-    mainValue: main || usd(firstTp?.market || firstTp?.mid),
-    rows, links: [['Cardmarket', c.cardmarket?.url], ['TCGplayer', c.tcgplayer?.url]],
-    updated: fecha(c.cardmarket?.updatedAt),
-    reload: async () => showPokemon((await getJSON(`${PKM}?q=id:${c.id}`)).data[0])
+    mainValue: main || usd(firstTp?.marketPrice || firstTp?.midPrice),
+    rows,
+    links: [['Cardmarket', `https://www.cardmarket.com/es/Pokemon/Products/Search?searchString=${encodeURIComponent(c.name)}`],
+            ['TCGplayer', tpId ? `https://www.tcgplayer.com/product/${tpId}` : null]],
+    updated: fecha(cm.updated),
+    reload: async () => showPokemon(await getJSON(`${PKM}/cards/${c.id}`))
   });
 }
 
