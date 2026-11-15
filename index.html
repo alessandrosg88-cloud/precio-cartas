@@ -7,19 +7,19 @@
 <style>
   :root{
     --bg:#f4f5f8; --card:#ffffff; --text:#1c1f26; --muted:#6b7280; --line:#e5e7eb;
-    --accent:#2563eb; --accent-soft:#e8efff; --good:#059669; --bad:#dc2626;
+    --accent:#2563eb; --accent-soft:#e8efff; --good:#059669; --bad:#dc2626; --warn:#b45309;
   }
   @media (prefers-color-scheme: dark){
     :root{ --bg:#0f1115; --card:#181b22; --text:#eef0f4; --muted:#9aa3b2; --line:#2a2f3a;
-      --accent:#5b8cff; --accent-soft:#1d2840; --good:#34d399; --bad:#f87171; }
+      --accent:#5b8cff; --accent-soft:#1d2840; --good:#34d399; --bad:#f87171; --warn:#fbbf24; }
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.45}
-  .wrap{max-width:860px;margin:0 auto;padding:28px 16px 60px}
+  .wrap{max-width:900px;margin:0 auto;padding:28px 16px 60px}
   h1{font-size:30px;margin:0 0 4px;text-align:center}
-  .sub{color:var(--muted);text-align:center;margin:0 0 24px}
+  .sub{color:var(--muted);text-align:center;margin:0 0 20px}
   .tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
-  .tab{border:1px solid var(--line);background:var(--card);color:var(--text);padding:10px 18px;border-radius:999px;font-size:16px;cursor:pointer}
+  .tab{border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px;border-radius:999px;font-size:15px;cursor:pointer}
   .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
   form{display:flex;gap:8px}
   input{flex:1;min-width:0;font-size:18px;padding:14px 16px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--text)}
@@ -30,24 +30,48 @@
   .ex{display:inline-block;margin:4px 6px 0 0;padding:3px 10px;border-radius:8px;background:var(--card);border:1px solid var(--line);cursor:pointer;font-family:ui-monospace,Menlo,monospace;font-size:14px;color:var(--text)}
   .msg{text-align:center;color:var(--muted);padding:24px}
   .msg.err{color:var(--bad)}
-  .result{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;grid-template-columns:240px 1fr;gap:22px}
-  .result img{width:100%;border-radius:10px}
+  .result{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;grid-template-columns:260px 1fr;gap:22px;touch-action:pan-y}
+  .pic{position:relative}
+  .pic img{width:100%;border-radius:10px;display:block;min-height:120px;background:var(--line)}
+  .pic.loading img{opacity:.35}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+  .arrow{width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:22px;cursor:pointer;flex:none}
+  .arrow:hover{border-color:var(--accent);color:var(--accent)}
+  .vlabel{text-align:center;font-size:13px;color:var(--muted);line-height:1.3}
+  .vlabel b{display:block;color:var(--text);font-size:14px}
+  .dots{display:flex;gap:5px;justify-content:center;margin-top:8px;flex-wrap:wrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--line)}
+  .dot.on{background:var(--accent)}
   .name{font-size:24px;font-weight:700;margin:0}
-  .meta{color:var(--muted);margin:4px 0 16px}
+  .meta{color:var(--muted);margin:4px 0 10px}
+  .rar{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:13px;margin:0 0 12px}
   .big{background:var(--accent-soft);border-radius:12px;padding:14px 16px;margin-bottom:14px}
   .big .lbl{font-size:14px;color:var(--muted)}
   .big .val{font-size:40px;font-weight:800;color:var(--good)}
+  .approx{color:var(--warn);font-size:13px}
   .upd{font-size:13px;color:var(--muted);margin-top:4px}
   .refresh{margin-left:6px;border:1px solid var(--line);background:var(--card);color:var(--accent);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:13px;font-weight:600}
   table{width:100%;border-collapse:collapse;font-size:15px}
   td{padding:8px 4px;border-bottom:1px solid var(--line)}
   td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
   .sec{font-weight:700;padding-top:14px;color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.04em}
-  .links a{display:inline-block;margin:14px 8px 0 0;padding:8px 14px;border-radius:10px;border:1px solid var(--line);color:var(--accent);text-decoration:none;font-weight:600}
+  .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .links a,.links button{padding:8px 14px;border-radius:10px;border:1px solid var(--line);color:var(--accent);background:var(--card);text-decoration:none;font-weight:600;font-size:15px;cursor:pointer}
+  .links .main{background:var(--accent);color:#fff;border-color:var(--accent)}
+  details.grade{margin-top:18px;border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+  details.grade summary{cursor:pointer;font-weight:700}
+  .gtable td:first-child a{color:var(--accent);font-weight:700;text-decoration:none}
+  .gtable td{font-size:14px}
+  .gtable td:last-child{font-weight:400;text-align:right;color:var(--muted)}
+  .note{font-size:13px;color:var(--muted);margin:8px 0 0}
   .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
   .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;cursor:pointer;text-align:center;font-size:13px;color:var(--text)}
-  .item img{width:100%;border-radius:6px}
+  .item img{width:100%;border-radius:6px;aspect-ratio:5/7;object-fit:cover;background:var(--line)}
+  .item .p{font-weight:700;color:var(--good);font-size:14px}
   .item:hover{border-color:var(--accent)}
+  .bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+  .bar h2{font-size:20px;margin:0}
+  .bar select{font-size:15px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
   .back{background:none;border:0;color:var(--accent);cursor:pointer;font-size:15px;margin-bottom:10px;padding:0}
   footer{color:var(--muted);font-size:13px;text-align:center;margin-top:30px}
   /* ---- Escáner ---- */
@@ -63,19 +87,15 @@
   .shoot{background:#4ade80;color:#06281a}
   .sec2{background:#2a2f3a;color:#fff}
   #scanStatus{min-height:24px;margin-top:12px;text-align:center;font-size:15px;color:#d1d5db}
-  @media (max-width:620px){ .result{grid-template-columns:1fr} .result img{max-width:260px;margin:0 auto;display:block} .big .val{font-size:34px} }
+  @media (max-width:640px){ .result{grid-template-columns:1fr} .pic{max-width:280px;margin:0 auto;width:100%} .big .val{font-size:34px} }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>🔎 Precio Cartas</h1>
-  <p class="sub">Escribe el código de tu carta y mira cuánto vale.</p>
+  <p class="sub">Escribe o escanea el código de tu carta y mira cuánto vale.</p>
 
-  <div class="tabs">
-    <button class="tab on" data-game="pokemon">Pokémon</button>
-    <button class="tab" data-game="yugioh">Yu-Gi-Oh!</button>
-    <button class="tab" data-game="magic">Magic</button>
-  </div>
+  <div class="tabs" id="tabs"></div>
 
   <form id="form">
     <input id="q" autocomplete="off" placeholder="Código o nombre de la carta">
@@ -101,42 +121,73 @@
   <div class="help" id="help"></div>
   <div id="out"></div>
 
-  <footer>Datos: tcgdex.net · ygoprodeck.com · scryfall.com — los precios son orientativos.</footer>
+  <footer>Precios: Cardmarket (guía de precios pública) · TCGplayer · tcgdex.net · ygoprodeck.com · scryfall.com — orientativos.</footer>
 </div>
 
 <script>
-// ===================== AYUDA POR JUEGO =====================
-const HELP = {
-  pokemon: {
-    text: 'Usa el <b>código del set + número</b> que aparece abajo de la carta (ej. <b>OBF 125</b>), solo el número (<b>125/197</b>) o el nombre en inglés.',
-    ex: ['OBF 125', '125/197', 'base1-4', 'Pikachu']
-  },
-  yugioh: {
-    text: 'Usa el <b>código impreso</b> debajo de la imagen, a la derecha (ej. <b>LOB-EN001</b>). También vale en español (<b>LOB-SP001</b>) o el nombre en inglés.',
-    ex: ['LOB-EN001', 'SDY-006', 'Dark Magician']
-  },
-  magic: {
-    text: 'Usa el <b>código del set + número</b> de abajo a la izquierda (ej. <b>MH3 123</b>) o el nombre (en inglés).',
-    ex: ['MH3 123', 'LEA 232', 'Lightning Bolt']
-  }
+// =====================================================================
+//  JUEGOS
+//  type 'api'   -> se consulta en directo (Pokémon, Yu-Gi-Oh!, Magic)
+//  type 'local' -> datos de /data/<juego>.json, se actualizan solos cada día (GitHub Action)
+//  type 'links' -> no hay base de datos de precios pública: enlaces de búsqueda
+// =====================================================================
+const GAMES = {
+  pokemon:   { label: 'Pokémon', type: 'api',
+    help: 'Usa el <b>código del set + número</b> de abajo de la carta (ej. <b>OBF 125</b>), solo el número (<b>125/197</b>) o el nombre en inglés.',
+    ex: ['OBF 125', '125/197', 'base1-4', 'Pikachu'] },
+  yugioh:    { label: 'Yu-Gi-Oh!', type: 'api',
+    help: 'Usa el <b>código impreso</b> debajo de la imagen (ej. <b>LOB-EN001</b>). También en español (<b>LOB-SP001</b>) o el nombre en inglés.',
+    ex: ['LOB-EN001', 'SDY-006', 'Dark Magician'] },
+  magic:     { label: 'Magic', type: 'api',
+    help: 'Usa el <b>código del set + número</b> de abajo a la izquierda (ej. <b>MH3 123</b>) o el nombre en inglés.',
+    ex: ['MH3 123', 'LEA 232', 'Lightning Bolt'] },
+  onepiece:  { label: 'One Piece', type: 'local', cm: 'OnePiece',
+    help: 'Usa el <b>código</b> de abajo a la derecha (ej. <b>OP01-120</b>) o el nombre en inglés.',
+    ex: ['OP01-120', 'OP05-119', 'Nami'] },
+  dragonball:{ label: 'Dragon Ball', type: 'local', cm: 'DragonBallSuper',
+    help: 'Fusion World y Masters. Usa el <b>código</b> (ej. <b>FB01-001</b>, <b>BT1-031</b>) o el nombre en inglés.',
+    ex: ['FB01-139', 'BT1-031', 'Son Goku'] },
+  digimon:   { label: 'Digimon', type: 'local', cm: 'Digimon',
+    help: 'Usa el <b>código</b> de abajo a la derecha (ej. <b>BT1-084</b>) o el nombre en inglés.',
+    ex: ['BT1-084', 'EX1-073', 'Omnimon'] },
+  lorcana:   { label: 'Lorcana', type: 'local', cm: 'Lorcana',
+    help: 'Usa el <b>número / total</b> de abajo (ej. <b>207/204</b>) o el nombre en inglés.',
+    ex: ['207/204', 'Elsa', 'Stitch'] },
+  gundam:    { label: 'Gundam', type: 'local', cm: 'Gundam',
+    help: 'Usa el <b>código</b> (ej. <b>GD01-001</b>) o el nombre en inglés.',
+    ex: ['GD01-001', 'ST01-001', 'Zaku'] },
+  riftbound: { label: 'League of Legends', type: 'local', cm: 'Riftbound',
+    help: 'Riftbound (el TCG de LoL). Usa el <b>número / total</b> (ej. <b>150/167</b>) o el nombre en inglés.',
+    ex: ['150/167', 'Jinx', 'Ahri'] },
+  weiss:     { label: 'Weiß Schwarz', type: 'local', cm: 'WeissSchwarz',
+    help: 'Usa el <b>código</b> de la carta (ej. <b>KGL/S79-001</b>) o el nombre en inglés.',
+    ex: ['Hatsune Miku', 'Rem', 'Asuna'] },
+  wow:       { label: 'World of Warcraft', type: 'local', cm: 'WoW',
+    help: 'Busca por <b>nombre</b> de la carta (en inglés) o por número.',
+    ex: ['Spectral Tiger', 'Thrall', 'Illidan'] },
+  duelmasters:{ label: 'Duel Masters', type: 'links',
+    help: 'Duel Masters no está en Cardmarket ni en TCGplayer, así que no hay precios públicos. Escribe el nombre o código y te llevo a buscarlo en tiendas.',
+    ex: ['Bolshack Dragon', 'DM01-S1'] },
 };
 
 let game = 'pokemon';
-let lastList = null;
 const $ = id => document.getElementById(id);
 const out = $('out');
+let backStack = []; // pantallas anteriores para el botón "Volver"
 
-function showHelp(){
-  const h = HELP[game];
-  $('help').innerHTML = h.text + '<br>Ejemplos: ' +
-    h.ex.map(e => `<span class="ex">${e}</span>`).join('');
-  $('help').querySelectorAll('.ex').forEach(el => el.onclick = () => { $('q').value = el.textContent; search(); });
-}
-
+$('tabs').innerHTML = Object.entries(GAMES).map(([k, g]) =>
+  `<button class="tab${k === game ? ' on' : ''}" data-game="${k}">${g.label}</button>`).join('');
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
-  t.classList.add('on'); game = t.dataset.game; out.innerHTML = ''; $('q').value = ''; showHelp(); $('q').focus();
+  t.classList.add('on'); game = t.dataset.game; out.innerHTML = ''; backStack = []; $('q').value = ''; showHelp(); $('q').focus();
+  if (GAMES[game].type === 'local') loadLocal(game).catch(() => {}); // precarga
 });
+
+function showHelp(){
+  const g = GAMES[game];
+  $('help').innerHTML = g.help + '<br>Ejemplos: ' + g.ex.map(e => `<span class="ex">${e}</span>`).join('');
+  $('help').querySelectorAll('.ex').forEach(el => el.onclick = () => { $('q').value = el.textContent; search(); });
+}
 $('form').onsubmit = e => { e.preventDefault(); search(); };
 
 // ===================== UTILIDADES =====================
@@ -144,12 +195,14 @@ const usd = v => (v == null || v === '' || Number(v) === 0) ? null : '$' + Numbe
 const eur = v => (v == null || v === '' || Number(v) === 0) ? null : Number(v).toFixed(2).replace('.', ',') + ' €';
 const fecha = d => d ? new Date(d).toLocaleDateString('es-ES') : '';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const normCode = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const normName = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-// Pide datos a la API; si falla, reintenta hasta 3 veces
+// Pide datos a una API; si falla, reintenta
 async function getJSON(url, tries = 4){
   for (let i = 1; ; i++) {
     try {
-      const r = await fetch(url, { cache: 'no-store' }); // siempre precio nuevo
+      const r = await fetch(url, { cache: 'no-store' });
       if (r.status === 404 || r.status === 400) return null;
       if (!r.ok) throw new Error('Error ' + r.status);
       return await r.json();
@@ -160,74 +213,182 @@ async function getJSON(url, tries = 4){
   }
 }
 
-function loading(){ out.innerHTML = '<div class="msg">Buscando…</div>'; }
+function loading(t = 'Buscando…'){ out.innerHTML = `<div class="msg">${t}</div>`; }
 function error(t){ out.innerHTML = `<div class="msg err">${t}</div>`; }
+function remember(fn){ backStack.push(fn); }
+function backBtn(){ return backStack.length ? '<button class="back" id="back">← Volver</button>' : ''; }
+function wireBack(){ const b = $('back'); if (b) b.onclick = () => { const fn = backStack.pop(); fn && fn(); }; }
 
-// Dibuja una carta. rows = [[etiqueta, valor] | ['#Sección']]
-function render({img, name, meta, mainLabel, mainValue, rows, links, updated, reload}){
+// ===================== EMPRESAS DE GRADEO =====================
+// Precios aproximados (más baratos por carta) consultados en noviembre de 2026
+const GRADERS = [
+  ['PSA', 'https://www.psacard.com/services', 'desde $39,99 (Value) · PSA Europa desde 59,99 €'],
+  ['CGC Cards', 'https://www.cgccards.com/', 'desde $17 (Bulk, mín. 25 cartas) · Standard $55'],
+  ['Beckett (BGS)', 'https://www.beckett.com/grading', 'desde $14,95 (Base) · Standard $34,95'],
+  ['SGC', 'https://gosgc.com/', 'desde $50 (Standard)'],
+  ['TAG', 'https://taggrading.com/', 'desde $59 (Express)'],
+  ['PCA (Europa)', 'https://pcagrade.com/', 'desde 10,90 €'],
+];
+function gradingHTML(value){
+  const cheap = value != null && value < 25;
+  return `<details class="grade"><summary>🏅 Gradear esta carta (PSA, CGC, Beckett…)</summary>
+    <table class="gtable">${GRADERS.map(([n, url, p]) =>
+      `<tr><td><a href="${url}" target="_blank" rel="noopener">${n} ↗</a></td><td>${p}</td></tr>`).join('')}</table>
+    ${cheap ? '<p class="note">⚠️ Esta carta vale menos de lo que cuesta gradearla: normalmente solo compensa si sale un 10.</p>' : ''}
+    <p class="note">Precios aproximados por carta (noviembre 2026), sin envío. Cambian a menudo: confírmalos en su web.</p>
+  </details>`;
+}
+
+// =====================================================================
+//  VISOR DE CARTA CON VERSIONES
+//  versions = { items: [...], index, build: async item => vista }
+//  Se cambia de versión con las flechas, deslizando el dedo o con ← → del teclado.
+// =====================================================================
+let current = null;
+
+async function showVersions(items, index, build){
+  current = { items, index: Math.max(0, index), build };
+  await drawCurrent();
+}
+
+async function go(step){
+  if (!current || current.items.length < 2) return;
+  current.index = (current.index + step + current.items.length) % current.items.length;
+  const pic = out.querySelector('.pic'); if (pic) pic.classList.add('loading');
+  await drawCurrent();
+}
+
+async function drawCurrent(){
+  const me = current, i = me.index;
+  let v;
+  try { v = await me.build(me.items[i]); }
+  catch (e) { console.error(e); return error('No se pudo cargar esta versión. Inténtalo otra vez.'); }
+  if (me !== current || i !== me.index) return; // el usuario ya cambió de versión
+  render(v);
+}
+
+// Dibuja una carta. v.rows = [[etiqueta, valor] | ['#Sección']]
+function render(v){
+  const n = current?.items.length || 1, i = current?.index || 0;
   const isSec = r => r[0].startsWith('#');
-  const kept = rows.filter(r => isSec(r) || r[1]);
-  // quita los títulos de sección que se quedaron sin precios debajo
-  const clean = kept.filter((r, i) => !isSec(r) || (kept[i + 1] && !isSec(kept[i + 1])));
+  const kept = v.rows.filter(r => isSec(r) || r[1]);
+  const clean = kept.filter((r, k) => !isSec(r) || (kept[k + 1] && !isSec(kept[k + 1])));
   const tr = clean.map(r => isSec(r)
     ? `<tr><td class="sec" colspan="2">${r[0].slice(1)}</td></tr>`
     : `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  const dots = n > 1 && n <= 24 ? `<div class="dots">${Array.from({length: n}, (_, k) => `<span class="dot${k === i ? ' on' : ''}"></span>`).join('')}</div>` : '';
   out.innerHTML = `
-    ${lastList ? '<button class="back" id="back">← Volver a los resultados</button>' : ''}
-    <div class="result">
-      <div>${img ? `<img src="${img}" alt="${esc(name)}">` : ''}</div>
+    ${backBtn()}
+    <div class="result" id="result">
+      <div class="pic">
+        ${v.img ? `<img src="${v.img}" alt="${esc(v.name)}">` : '<img alt="">'}
+        ${n > 1 ? `<div class="nav">
+            <button class="arrow" id="prev" aria-label="Versión anterior">‹</button>
+            <div class="vlabel"><b>Versión ${i + 1} de ${n}</b>${esc(v.versionLabel || v.rarity || '')}</div>
+            <button class="arrow" id="next" aria-label="Versión siguiente">›</button>
+          </div>${dots}` : ''}
+      </div>
       <div>
-        <p class="name">${esc(name)}</p>
-        <p class="meta">${meta}</p>
-        <div class="big"><div class="lbl">${mainLabel}</div><div class="val">${mainValue || 'Sin precio'}</div>
-          <div class="upd">${updated ? 'Datos de Cardmarket del ' + esc(updated) + ' · ' : ''}consultado a las ${new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})}
-            ${reload ? '<button class="refresh" id="refresh">🔄 Actualizar precio</button>' : ''}</div></div>
+        <p class="name">${esc(v.name)}</p>
+        <p class="meta">${v.meta}</p>
+        ${v.rarity ? `<span class="rar">✦ ${esc(v.rarity)}</span>` : ''}
+        <div class="big"><div class="lbl">${v.mainLabel}</div><div class="val">${v.mainValue || 'Sin precio'}</div>
+          ${v.approx ? `<div class="approx">${v.approx}</div>` : ''}
+          <div class="upd">${v.updated ? esc(v.updated) + ' · ' : ''}consultado a las ${new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})}
+            ${v.reload ? '<button class="refresh" id="refresh">🔄 Actualizar precio</button>' : ''}</div></div>
         <table>${tr || '<tr><td>No hay más precios disponibles</td><td></td></tr>'}</table>
-        <div class="links">${links.filter(l => l[1]).map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${l[0]} ↗</a>`).join('')}</div>
+        <div class="links">
+          ${v.openSet ? '<button class="main" id="openSet">📚 Ver la expansión entera</button>' : ''}
+          ${v.links.filter(l => l[1]).map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${l[0]} ↗</a>`).join('')}
+        </div>
+        ${gradingHTML(v.value)}
       </div>
     </div>`;
-  if (lastList) $('back').onclick = () => renderList(lastList);
-  if (reload) $('refresh').onclick = async () => {
+  wireBack();
+  if (n > 1) { $('prev').onclick = () => go(-1); $('next').onclick = () => go(1); }
+  if (v.reload) $('refresh').onclick = async () => {
     $('refresh').textContent = 'Actualizando…';
-    try { await reload(); } catch (e) { $('refresh').textContent = '⚠️ Error, reintenta'; }
+    try { await v.reload(); } catch (e) { $('refresh').textContent = '⚠️ Error, reintenta'; }
   };
+  if (v.openSet) $('openSet').onclick = () => {
+    const snap = { ...current };
+    remember(() => { current = snap; drawCurrent(); });
+    v.openSet();
+  };
+  // Deslizar con el dedo
+  const box = $('result'); let x0 = null, y0 = null;
+  box.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  box.addEventListener('touchend', e => {
+    if (x0 == null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
+    x0 = null;
+  });
 }
+document.addEventListener('keydown', e => {
+  if (!$('result') || document.activeElement === $('q')) return;
+  if (e.key === 'ArrowRight') go(1);
+  if (e.key === 'ArrowLeft') go(-1);
+});
 
-// Lista de resultados cuando hay varias cartas
-function renderList(list){
-  lastList = list;
-  out.innerHTML = `<p class="msg">${list.items.length} resultados — toca una carta</p>
-    <div class="list">${list.items.map((it, i) =>
-      `<div class="item" data-i="${i}">${it.img ? `<img src="${it.img}" loading="lazy">` : ''}<div>${esc(it.title)}</div></div>`).join('')}</div>`;
-  out.querySelectorAll('.item').forEach(el => el.onclick = () => list.open(list.items[el.dataset.i].data));
+// Rejilla de cartas (resultados de búsqueda o expansión entera)
+// items: [{ img, title, sub, price, open }]
+function renderGrid(title, items, { sort } = {}){
+  const draw = list => {
+    out.innerHTML = `${backBtn()}
+      <div class="bar"><h2>${title}</h2>
+        ${sort ? `<select id="sort"><option value="num">Ordenar por número</option><option value="hi">Más caras primero</option><option value="lo">Más baratas primero</option></select>` : ''}
+      </div>
+      <div class="list">${list.map((it, k) => `<div class="item" data-k="${k}">
+          <img src="${it.img || ''}" loading="lazy" alt="">
+          <div>${esc(it.title)}</div>${it.sub ? `<div class="note">${esc(it.sub)}</div>` : ''}
+          ${it.price ? `<div class="p">${it.price}</div>` : ''}</div>`).join('')}</div>`;
+    wireBack();
+    out.querySelectorAll('.item').forEach(el => el.onclick = () => {
+      remember(() => draw(list));
+      list[el.dataset.k].open();
+    });
+    if (sort) {
+      $('sort').value = sortMode;
+      $('sort').onchange = e => { sortMode = e.target.value; draw(sorted()); };
+    }
+  };
+  let sortMode = 'num';
+  const sorted = () => sortMode === 'num' ? items : [...items].sort((a, b) =>
+    sortMode === 'hi' ? (b.v ?? -1) - (a.v ?? -1) : (a.v ?? 1e9) - (b.v ?? 1e9));
+  draw(items);
 }
 
 // ===================== BÚSQUEDA =====================
 async function search(){
   const q = $('q').value.trim();
   if (!q) return;
-  lastList = null;
+  backStack = []; current = null;
   loading();
   try {
+    const g = GAMES[game];
     if (game === 'pokemon') await searchPokemon(q);
-    if (game === 'yugioh') await searchYugioh(q);
-    if (game === 'magic')  await searchMagic(q);
+    else if (game === 'yugioh') await searchYugioh(q);
+    else if (game === 'magic') await searchMagic(q);
+    else if (g.type === 'local') await searchLocal(q);
+    else searchLinks(q);
   } catch (e) {
-    error('No se pudo conectar con la base de datos. Inténtalo de nuevo en unos segundos.');
     console.error(e);
+    error('No se pudo conectar con la base de datos. Inténtalo de nuevo en unos segundos.');
   }
 }
 
-// ---------- POKÉMON (tcgdex.net — precios de Cardmarket actualizados a diario) ----------
+// =====================================================================
+//  POKÉMON (tcgdex.net — precios de Cardmarket actualizados a diario)
+// =====================================================================
 const PKM = 'https://api.tcgdex.net/v2/en';
 const pkmImg = (c, q) => c.image ? `${c.image}/${q}.webp` : '';
-const pkmSets = {}; // código impreso (OBF) -> ids de sets (sv03)
+const pkmSets = {};
 async function pokemonSetIds(code){
   code = code.toUpperCase();
   if (!pkmSets[code]) pkmSets[code] = ((await getJSON(`${PKM}/sets?abbreviation.official=${encodeURIComponent(code)}`)) || []).map(s => s.id);
   return pkmSets[code];
 }
-// Busca la carta número "num" dentro de varios sets
 async function cardsInSets(setIds, num){
   const n = String(num).replace(/^0+(?=.)/, '');
   const found = await Promise.all(setIds.map(async id =>
@@ -238,73 +399,100 @@ async function cardsInSets(setIds, num){
 
 async function searchPokemon(q){
   let m, cards = [];
-  if (/^[a-z0-9.]+-[a-z0-9]+$/i.test(q)) {                               // id: sv03-125
+  if (/^[a-z0-9.]+-[a-z0-9]+$/i.test(q)) {
     const id = q.toLowerCase();
     const c = await getJSON(`${PKM}/cards/${id}`) ||
-              await getJSON(`${PKM}/cards/${id.replace(/^([a-z]+)(\d)(?=\D)/, '$10$2')}`); // sv3-125 -> sv03-125
+              await getJSON(`${PKM}/cards/${id.replace(/^([a-z]+)(\d)(?=\D)/, '$10$2')}`);
     if (c) cards = [c];
-  } else if ((m = q.match(/^0*(\d+)\s*\/\s*0*(\d+)$/))) {                 // 125/197 (sin set)
+  } else if ((m = q.match(/^0*(\d+)\s*\/\s*0*(\d+)$/))) {
     const sets = (await getJSON(`${PKM}/sets?cardCount.official=${m[2]}`)) || [];
     cards = await cardsInSets(sets.map(s => s.id), m[1]);
-  } else if ((m = q.match(/^([a-z0-9-]{2,6})\s+(\w+?)(?:\/\d+)?$/i))) {   // OBF 125 o OBF 125/197
+  } else if ((m = q.match(/^([a-z0-9-]{2,6})\s+(\w+?)(?:\/\d+)?$/i))) {
     const ids = await pokemonSetIds(m[1]);
     if (!ids.length) return error(`No conozco el set "${esc(m[1].toUpperCase())}". Revisa el código.`);
     cards = await cardsInSets(ids, m[2]);
-  } else {                                                                 // nombre
+  } else {
     const list = (await getJSON(`${PKM}/cards?name=${encodeURIComponent(q)}`)) || [];
-    if (list.length === 1) cards = [await getJSON(`${PKM}/cards/${list[0].id}`)].filter(Boolean);
-    else if (list.length > 1) return renderList({
-      open: async b => { loading(); showPokemon(await getJSON(`${PKM}/cards/${b.id}`)); },
-      items: list.slice(-60).reverse().map(b => ({ img: pkmImg(b, 'low'), title: `${b.name} · ${b.id}`, data: b })) });
+    if (!list.length) return error('No encontré esa carta. Revisa el código (ej. OBF 125).');
+    if (list.length === 1) return openPokemon(await getJSON(`${PKM}/cards/${list[0].id}`));
+    return renderGrid(`${list.length} resultados`, list.slice(-80).reverse().map(b => ({
+      img: pkmImg(b, 'low'), title: b.name, sub: b.id,
+      open: async () => { loading('Cargando…'); openPokemon(await getJSON(`${PKM}/cards/${b.id}`)); } })));
   }
   if (!cards.length) return error('No encontré esa carta. Revisa el código (ej. OBF 125).');
-  if (cards.length === 1) return showPokemon(cards[0]);
-  renderList({ open: showPokemon, items: cards.map(c => ({
-    img: pkmImg(c, 'low'), title: `${c.name} · ${c.set.name} ${c.localId}`, data: c })) });
+  if (cards.length === 1) return openPokemon(cards[0]);
+  renderGrid(`${cards.length} cartas con ese número`, cards.map(c => ({
+    img: pkmImg(c, 'low'), title: c.name, sub: `${c.set.name} ${c.localId}`, open: () => openPokemon(c) })));
 }
 
-function showPokemon(c){
+// Versiones = todas las cartas con el mismo nombre (otras expansiones / ilustraciones)
+const pkmCache = {};
+async function openPokemon(c){
+  pkmCache[c.id] = c;
+  let others = [];
+  try { others = (await getJSON(`${PKM}/cards?name=eq:${encodeURIComponent(c.name)}`)) || []; } catch (e) {}
+  if (!others.some(o => o.id === c.id)) others.unshift({ id: c.id });
+  others = others.slice(-60);
+  const idx = others.findIndex(o => o.id === c.id);
+  await showVersions(others, idx, async o => {
+    const full = pkmCache[o.id] || (pkmCache[o.id] = await getJSON(`${PKM}/cards/${o.id}`));
+    return pokemonView(full);
+  });
+}
+
+function pokemonView(c){
   const cm = c.pricing?.cardmarket || {}, tp = c.pricing?.tcgplayer || {};
   const NAMES = { normal:'Normal', holofoil:'Holo', 'reverse-holofoil':'Reverse Holo',
     '1st-edition-holofoil':'1ª Edición Holo', '1st-edition':'1ª Edición', 'unlimited-holofoil':'Unlimited Holo' };
   const rows = [['#Cardmarket (Europa)'],
     ['Tendencia', eur(cm.trend)], ['Precio medio de venta', eur(cm.avg)], ['Desde', eur(cm.low)],
     ['Media último día', eur(cm.avg1)], ['Media 7 días', eur(cm.avg7)], ['Media 30 días', eur(cm.avg30)],
-    ['Holo / Reverse (tendencia)', eur(cm['trend-holo'])],
-    ['#TCGplayer (EE. UU.)']];
+    ['Holo / Reverse (tendencia)', eur(cm['trend-holo'])], ['#TCGplayer (EE. UU.)']];
   let tpId = null;
   for (const [k, p] of Object.entries(tp)) {
     if (!p || typeof p !== 'object') continue;
     tpId = tpId || p.productId;
     rows.push([`${NAMES[k] || k} — mercado`, usd(p.marketPrice) || usd(p.midPrice)]);
   }
-  const main = eur(cm.trend) || eur(cm.avg);
+  const main = cm.trend || cm.avg;
   const firstTp = Object.values(tp).find(p => p && typeof p === 'object');
-  render({
-    img: pkmImg(c, 'high'), name: c.name,
-    meta: `${esc(c.set?.name)} · Nº ${esc(c.localId)}/${esc(c.set?.cardCount?.official ?? '?')} · ${esc(c.rarity || '')}`,
+  return {
+    img: pkmImg(c, 'high'), name: c.name, rarity: c.rarity,
+    versionLabel: `${c.set?.name || ''} · ${c.localId}`,
+    meta: `${esc(c.set?.name)} · Nº ${esc(c.localId)}/${esc(c.set?.cardCount?.official ?? '?')}`,
     mainLabel: main ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
-    mainValue: main || usd(firstTp?.marketPrice || firstTp?.midPrice),
+    mainValue: eur(main) || usd(firstTp?.marketPrice || firstTp?.midPrice), value: main || firstTp?.marketPrice,
     rows,
     links: [['Cardmarket', `https://www.cardmarket.com/es/Pokemon/Products/Search?searchString=${encodeURIComponent(c.name)}`],
             ['TCGplayer', tpId ? `https://www.tcgplayer.com/product/${tpId}` : null]],
-    updated: fecha(cm.updated),
-    reload: async () => showPokemon(await getJSON(`${PKM}/cards/${c.id}`))
-  });
+    updated: cm.updated ? 'Cardmarket del ' + fecha(cm.updated) : '',
+    reload: async () => { pkmCache[c.id] = await getJSON(`${PKM}/cards/${c.id}`); drawCurrent(); },
+    openSet: c.set?.id ? () => openPokemonSet(c.set.id) : null,
+  };
 }
 
-// ---------- YU-GI-OH! (ygoprodeck.com) ----------
+async function openPokemonSet(id){
+  loading('Cargando la expansión…');
+  const s = await getJSON(`${PKM}/sets/${id}`);
+  if (!s) return error('No se pudo cargar la expansión.');
+  renderGrid(`${esc(s.name)} · ${s.cards.length} cartas <span class="note">(toca una carta para ver su precio)</span>`,
+    s.cards.map(b => ({ img: pkmImg(b, 'low'), title: b.name, sub: 'Nº ' + b.localId,
+      open: async () => { loading('Cargando…'); openPokemon(await getJSON(`${PKM}/cards/${b.id}`)); } })));
+}
+
+// =====================================================================
+//  YU-GI-OH! (ygoprodeck.com)  — versiones = todas sus ediciones/rarezas
+// =====================================================================
 const YGO = 'https://db.ygoprodeck.com/api/v7';
 async function searchYugioh(q){
   const m = q.toUpperCase().replace(/\s+/g, '').match(/^([A-Z0-9]+)-([A-Z]{0,2})(\d+)$/);
   if (m) {
-    // Prueba el código tal cual y, si no, su versión en inglés (SP→EN, etc.)
     const tries = [q.toUpperCase().replace(/\s+/g, ''), `${m[1]}-EN${m[3]}`, `${m[1]}-${m[3]}`];
     for (const code of [...new Set(tries)]) {
       const info = await getJSON(`${YGO}/cardsetsinfo.php?setcode=${encodeURIComponent(code)}`).catch(() => null);
       if (info && info.id) {
         const card = (await getJSON(`${YGO}/cardinfo.php?id=${info.id}`))?.data?.[0];
-        return showYugioh(card, code);
+        return openYugioh(card, code, info.set_rarity);
       }
     }
     return error('No encontré ese código. Revisa que esté bien escrito (ej. LOB-EN001).');
@@ -312,63 +500,228 @@ async function searchYugioh(q){
   const r = await getJSON(`${YGO}/cardinfo.php?fname=${encodeURIComponent(q)}`);
   const cards = r?.data || [];
   if (!cards.length) return error('No encontré esa carta. Prueba con el código o el nombre en inglés.');
-  if (cards.length === 1) return showYugioh(cards[0]);
-  renderList({ open: c => showYugioh(c), items: cards.slice(0, 60).map(c => ({
-    img: c.card_images?.[0]?.image_url_small, title: c.name, data: c })) });
+  if (cards.length === 1) return openYugioh(cards[0]);
+  renderGrid(`${cards.length} resultados`, cards.slice(0, 80).map(c => ({
+    img: c.card_images?.[0]?.image_url_small, title: c.name,
+    price: eur(c.card_prices?.[0]?.cardmarket_price), open: () => openYugioh(c) })));
 }
 
-function showYugioh(c, code){
+function openYugioh(c, code, rarity){
+  const sets = c.card_sets || [];
+  // ordena: primero la edición buscada, luego por precio
+  const items = sets.length ? [...sets] : [null];
+  let idx = code ? items.findIndex(s => s && s.set_code.toUpperCase() === code && (!rarity || s.set_rarity === rarity)) : -1;
+  if (idx < 0 && code) idx = items.findIndex(s => s && s.set_code.toUpperCase() === code);
+  return showVersions(items, idx < 0 ? 0 : idx, async s => yugiohView(c, s));
+}
+
+function yugiohView(c, set){
   const p = c.card_prices?.[0] || {};
-  const set = code && (c.card_sets || []).find(s => s.set_code.toUpperCase() === code);
   const rows = [];
   if (set) rows.push(['#Esta edición (TCGplayer)'], [`${set.set_code} (${set.set_rarity})`, usd(set.set_price)]);
   rows.push(['#Precio general de la carta'],
     ['Cardmarket (la edición más barata)', eur(p.cardmarket_price)], ['TCGplayer', usd(p.tcgplayer_price)],
     ['eBay', usd(p.ebay_price)], ['Amazon', usd(p.amazon_price)], ['CoolStuffInc', usd(p.coolstuffinc_price)]);
-  const main = set ? usd(set.set_price) : eur(p.cardmarket_price);
-  render({
-    img: c.card_images?.[0]?.image_url, name: c.name,
-    meta: set ? `${esc(set.set_name)} · ${esc(set.set_code)} · ${esc(set.set_rarity)}` : esc(c.type),
-    mainLabel: set ? `Precio de esta edición exacta (${esc(set.set_rarity)})` : 'Precio en Cardmarket (desde)',
-    mainValue: main || eur(p.cardmarket_price) || usd(p.tcgplayer_price),
-    reload: async () => showYugioh((await getJSON(`${YGO}/cardinfo.php?id=${c.id}`)).data[0], code),
+  const sp = set && Number(set.set_price);
+  return {
+    img: c.card_images?.[0]?.image_url, name: c.name, rarity: set?.set_rarity,
+    versionLabel: set ? `${set.set_code} · ${set.set_rarity}` : '',
+    meta: set ? `${esc(set.set_name)} · ${esc(set.set_code)}` : esc(c.type),
+    mainLabel: sp ? 'Precio de esta edición exacta' : 'Precio en Cardmarket (desde)',
+    mainValue: (sp && usd(sp)) || eur(p.cardmarket_price) || usd(p.tcgplayer_price),
+    value: sp || Number(p.cardmarket_price) || null,
     rows,
     links: [['Cardmarket', `https://www.cardmarket.com/es/YuGiOh/Products/Search?searchString=${encodeURIComponent(c.name)}`],
             ['TCGplayer', `https://www.tcgplayer.com/search/yugioh/product?q=${encodeURIComponent(c.name)}`],
-            ['Ficha', c.ygoprodeck_url]]
-  });
+            ['Ficha', c.ygoprodeck_url]],
+    reload: async () => { const n = (await getJSON(`${YGO}/cardinfo.php?id=${c.id}`))?.data?.[0]; if (n) { Object.assign(c, n); drawCurrent(); } },
+    openSet: set ? () => openYugiohSet(set.set_name) : null,
+  };
 }
 
-// ---------- MAGIC (scryfall.com) ----------
+async function openYugiohSet(name){
+  loading('Cargando la expansión…');
+  const r = await getJSON(`${YGO}/cardinfo.php?cardset=${encodeURIComponent(name)}`);
+  const cards = r?.data || [];
+  if (!cards.length) return error('No se pudo cargar la expansión.');
+  const items = [];
+  for (const c of cards) for (const s of c.card_sets || []) if (s.set_name === name) items.push({
+    img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${s.set_rarity}`,
+    price: usd(s.set_price), v: Number(s.set_price) || null, code: s.set_code,
+    open: () => openYugioh(c, s.set_code.toUpperCase(), s.set_rarity) });
+  items.sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true }));
+  renderGrid(`${esc(name)} · ${items.length} cartas`, items, { sort: true });
+}
+
+// =====================================================================
+//  MAGIC (scryfall.com) — versiones = todas sus impresiones
+// =====================================================================
 const MTG = 'https://api.scryfall.com';
 async function searchMagic(q){
   const m = q.match(/^([a-z0-9]{2,6})\s*[\s\-\/#]\s*([0-9a-z★]+)$/i);
   if (m) {
     const c = await getJSON(`${MTG}/cards/${m[1].toLowerCase()}/${m[2].toLowerCase()}`);
-    if (c) return showMagic(c);
+    if (c) return openMagic(c);
   }
-  const r = await getJSON(`${MTG}/cards/search?unique=prints&order=released&q=${encodeURIComponent(q)}`);
+  const r = await getJSON(`${MTG}/cards/search?order=name&q=${encodeURIComponent(q)}`);
   const cards = r?.data || [];
   if (!cards.length) return error('No encontré esa carta. Revisa el código (ej. MH3 123) o el nombre en inglés.');
-  if (cards.length === 1) return showMagic(cards[0]);
-  renderList({ open: showMagic, items: cards.slice(0, 60).map(c => ({
-    img: mtgImg(c, 'small'), title: `${c.name} · ${c.set.toUpperCase()} ${c.collector_number}`, data: c })) });
+  if (cards.length === 1) return openMagic(cards[0]);
+  renderGrid(`${cards.length} resultados`, cards.slice(0, 80).map(c => ({
+    img: mtgImg(c, 'small'), title: c.name, price: eur(c.prices?.eur) || usd(c.prices?.usd), open: () => openMagic(c) })));
 }
 const mtgImg = (c, size) => c.image_uris?.[size] || c.card_faces?.[0]?.image_uris?.[size];
 
-function showMagic(c){
+async function openMagic(c){
+  let prints = [c];
+  try {
+    const r = await getJSON(c.prints_search_uri);
+    if (r?.data?.length) prints = r.data;
+  } catch (e) {}
+  const idx = prints.findIndex(p => p.id === c.id);
+  return showVersions(prints, idx < 0 ? 0 : idx, async p => magicView(p));
+}
+
+function magicView(c){
   const p = c.prices || {};
-  const main = eur(p.eur) || usd(p.usd) || eur(p.eur_foil) || usd(p.usd_foil);
-  render({
-    img: mtgImg(c, 'normal'), name: c.name,
-    meta: `${esc(c.set_name)} · ${esc(c.set.toUpperCase())} ${esc(c.collector_number)} · ${esc(c.rarity)}`,
-    mainLabel: eur(p.eur) ? 'Precio en Cardmarket' : 'Precio de referencia',
-    reload: async () => showMagic(await getJSON(`${MTG}/cards/${c.id}`)),
-    mainValue: main,
+  const main = Number(p.eur) || Number(p.usd) || Number(p.eur_foil) || Number(p.usd_foil) || null;
+  return {
+    img: mtgImg(c, 'normal'), name: c.name, rarity: c.rarity,
+    versionLabel: `${c.set_name} · ${c.collector_number}`,
+    meta: `${esc(c.set_name)} · ${esc(c.set.toUpperCase())} ${esc(c.collector_number)}`,
+    mainLabel: p.eur ? 'Precio en Cardmarket' : 'Precio de referencia',
+    mainValue: eur(p.eur) || usd(p.usd) || eur(p.eur_foil) || usd(p.usd_foil), value: main,
     rows: [['#Cardmarket (Europa)'], ['Normal', eur(p.eur)], ['Foil', eur(p.eur_foil)],
            ['#TCGplayer (EE. UU.)'], ['Normal', usd(p.usd)], ['Foil', usd(p.usd_foil)], ['Etched', usd(p.usd_etched)]],
-    links: [['Cardmarket', c.purchase_uris?.cardmarket], ['TCGplayer', c.purchase_uris?.tcgplayer], ['Scryfall', c.scryfall_uri]]
-  });
+    links: [['Cardmarket', c.purchase_uris?.cardmarket], ['TCGplayer', c.purchase_uris?.tcgplayer], ['Scryfall', c.scryfall_uri]],
+    reload: async () => { const n = await getJSON(`${MTG}/cards/${c.id}`); if (n) { Object.assign(c, n); drawCurrent(); } },
+    openSet: () => openMagicSet(c.set, c.set_name),
+  };
+}
+
+async function openMagicSet(code, name){
+  loading('Cargando la expansión…');
+  let url = `${MTG}/cards/search?order=set&unique=prints&q=${encodeURIComponent('e:' + code)}`, cards = [];
+  for (let page = 0; url && page < 4; page++) {
+    const r = await getJSON(url); if (!r) break;
+    cards.push(...r.data); url = r.has_more ? r.next_page : null;
+  }
+  if (!cards.length) return error('No se pudo cargar la expansión.');
+  renderGrid(`${esc(name)} · ${cards.length} cartas`, cards.map(c => ({
+    img: mtgImg(c, 'small'), title: c.name, sub: `Nº ${c.collector_number} · ${c.rarity}`,
+    price: eur(c.prices?.eur) || usd(c.prices?.usd), v: Number(c.prices?.eur) || Number(c.prices?.usd) || null,
+    open: () => openMagic(c) })), { sort: true });
+}
+
+// =====================================================================
+//  JUEGOS CON DATOS DIARIOS (One Piece, Dragon Ball, Digimon, Lorcana,
+//  Gundam, Riftbound, Weiß Schwarz, WoW)
+//  Fichero data/<juego>.json, lo actualiza cada día la GitHub Action.
+// =====================================================================
+const localData = {};
+async function loadLocal(key){
+  if (localData[key]) return localData[key];
+  const r = await fetch(`data/${key}.json`);
+  if (!r.ok) throw new Error('Sin datos');
+  const d = await r.json();
+  d.byCode = {};
+  for (const c of d.cards) {
+    c.k = normCode(c.c);              // código completo
+    c.k1 = normCode(String(c.c).split(' ')[0]); // sin la rareza (Digimon: "BT1-084 SR")
+    c.nn = normName(c.n);
+    for (const k of new Set([c.k, c.k1])) if (k) (d.byCode[k] ||= []).push(c);
+  }
+  return (localData[key] = d);
+}
+const tcgImg = (c, big) => `https://tcgplayer-cdn.tcgplayer.com/product/${c.id}_${big ? 'in_1000x1000' : '200w'}.jpg`;
+const localValue = c => c.e || c.u || null;
+const localPrice = c => eur(c.e) || usd(c.u);
+
+async function searchLocal(q){
+  loading('Cargando datos del juego…');
+  const d = await loadLocal(game).catch(() => null);
+  if (!d) return error('Los datos de este juego aún no están listos. Vuelve a intentarlo en unos minutos.');
+  const k = normCode(q);
+  let found = d.byCode[k] || [];
+  if (!found.length && /\d/.test(q)) {                 // código parcial: "OP01-12" -> empieza por
+    found = d.cards.filter(c => c.k.startsWith(k) || c.k1.startsWith(k));
+    if (found.length > 1 && new Set(found.map(c => c.k1)).size > 1) {
+      return gridLocal(`${found.length} cartas`, found);
+    }
+  }
+  if (found.length) return openLocal(found[0], sameCard(d, found[0]));
+  const words = normName(q).split(/\s+/).filter(Boolean);
+  const byName = d.cards.filter(c => words.every(w => c.nn.includes(w)));
+  if (!byName.length) return error('No encontré esa carta. Revisa el código o escribe el nombre en inglés.');
+  // agrupa las versiones de la misma carta y muestra una por grupo
+  const groups = {};
+  for (const c of byName) (groups[c.k1 || c.nn] ||= []).push(c);
+  const reps = Object.values(groups).map(g => g.sort((a, b) => (localValue(a) ?? 1e9) - (localValue(b) ?? 1e9))[0]);
+  if (reps.length === 1) return openLocal(reps[0], sameCard(d, reps[0]));
+  gridLocal(`${reps.length} resultados`, reps);
+}
+
+// Todas las versiones (rarezas, paralelas, alt art…) de la misma carta
+function sameCard(d, c){
+  const list = c.k1 ? d.byCode[c.k1] : d.cards.filter(x => x.nn === c.nn);
+  return [...new Set(list)].sort((a, b) => (localValue(a) ?? 1e9) - (localValue(b) ?? 1e9));
+}
+
+function gridLocal(title, cards, opts){
+  const d = localData[game];
+  renderGrid(title, cards.slice(0, 300).map(c => ({
+    img: tcgImg(c), title: c.n, sub: [c.c, c.r].filter(Boolean).join(' · '),
+    price: localPrice(c), v: localValue(c),
+    open: () => openLocal(c, sameCard(d, c)) })), opts);
+}
+
+function openLocal(c, versions){
+  const key = game;
+  const idx = versions.indexOf(c);
+  return showVersions(versions, idx < 0 ? 0 : idx, async x => localView(key, x));
+}
+
+function localView(key, c){
+  const d = localData[key], g = GAMES[key], set = d.sets[c.g] || {};
+  const rows = [['#Cardmarket (Europa)'],
+    ['Tendencia', eur(c.e)], ['Desde', eur(c.el)], ['Media 30 días', eur(c.e30)], ['Foil (tendencia)', eur(c.ef)],
+    ['#TCGplayer (EE. UU.)'], ['Precio de mercado', usd(c.u)], ['Desde', usd(c.ul)], ['Foil', usd(c.uf)]];
+  const cmLink = c.cm
+    ? `https://www.cardmarket.com/es/${g.cm}/Products?idProduct=${c.cm}`
+    : `https://www.cardmarket.com/es/${g.cm}/Products/Search?searchString=${encodeURIComponent(c.n.replace(/\(.*?\)/g, '').trim())}`;
+  return {
+    img: tcgImg(c, true), name: c.n, rarity: c.r,
+    versionLabel: [c.r, c.c].filter(Boolean).join(' · '),
+    meta: `${esc(set.n || '')}${c.c ? ' · ' + esc(c.c) : ''}`,
+    mainLabel: c.e ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
+    mainValue: localPrice(c), value: localValue(c),
+    approx: c.e && c.ea ? '≈ Hay varias versiones de esta carta en Cardmarket: comprueba que sea la tuya en el enlace.' : '',
+    rows,
+    links: [['Cardmarket', cmLink], ['TCGplayer', `https://www.tcgplayer.com/product/${c.id}`]],
+    updated: 'Precios del ' + fecha(d.updated),
+    openSet: () => {
+      const list = d.cards.filter(x => x.g === c.g)
+        .sort((a, b) => String(a.c).localeCompare(String(b.c), 'en', { numeric: true }));
+      gridLocal(`${esc(set.n || 'Expansión')} · ${list.length} cartas`, list, { sort: true });
+    },
+  };
+}
+
+// =====================================================================
+//  DUEL MASTERS — sin precios públicos: enlaces de búsqueda
+// =====================================================================
+function searchLinks(q){
+  const e = encodeURIComponent(q);
+  out.innerHTML = `<div class="result" style="display:block">
+    <p class="name">${esc(q)}</p>
+    <p class="meta">No hay una base de precios pública para Duel Masters. Búscala en estas tiendas:</p>
+    <div class="links">
+      <a class="main" href="https://www.ebay.es/sch/i.html?_nkw=${encodeURIComponent('duel masters ' + q)}&LH_Sold=1" target="_blank" rel="noopener">eBay (vendidas) ↗</a>
+      <a href="https://yuyu-tei.jp/sell/dm/s/search?search_word=${e}" target="_blank" rel="noopener">Yuyu-tei (Japón) ↗</a>
+      <a href="https://www.google.com/search?q=${encodeURIComponent('duel masters ' + q + ' precio')}" target="_blank" rel="noopener">Google ↗</a>
+    </div>
+    ${gradingHTML(null)}
+  </div>`;
 }
 
 // ===================== ESCÁNER CON CÁMARA =====================
@@ -382,7 +735,7 @@ $('shoot').onclick = () => readImage(cropGuide(video, video.videoWidth, video.vi
 $('photo').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   const img = new Image();
-  img.onload = () => { readImage(toCanvas(img, img.width, img.height)); URL.revokeObjectURL(img.src); };
+  img.onload = () => { readImage(prep(img, 0, 0, img.width, img.height)); URL.revokeObjectURL(img.src); };
   img.src = URL.createObjectURL(f);
   e.target.value = '';
 };
@@ -390,7 +743,8 @@ $('photo').onchange = e => {
 async function openScan(){
   $('scan').classList.add('open');
   setStatus('');
-  loadOCR().catch(() => {}); // empieza a cargar el lector mientras tanto
+  loadOCR().catch(() => {});
+  if (GAMES[game].type === 'local') loadLocal(game).catch(() => {});
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
@@ -400,22 +754,16 @@ async function openScan(){
     setStatus('No se pudo abrir la cámara. Da permiso a la cámara o usa "Subir foto".');
   }
 }
-
 function closeScan(){
   $('scan').classList.remove('open');
   if (stream) stream.getTracks().forEach(t => t.stop());
   stream = null;
 }
-
 // Recorta la zona del recuadro verde (mismas proporciones que en el CSS)
 function cropGuide(src, w, h){
   if (!w) return null;
-  const x = w * .08, y = h * .38, cw = w * .84, ch = h * .24;
-  return prep(src, x, y, cw, ch);
+  return prep(src, w * .08, h * .38, w * .84, h * .24);
 }
-// Para fotos subidas usamos la imagen entera
-function toCanvas(src, w, h){ return prep(src, 0, 0, w, h); }
-
 // Agranda la imagen y la pasa a blanco y negro con más contraste para leer mejor
 function prep(src, x, y, w, h){
   const scale = Math.min(3, 2000 / w);
@@ -431,7 +779,6 @@ function prep(src, x, y, w, h){
   g.putImageData(img, 0, 0);
   return c;
 }
-
 function loadScript(src){
   return new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
 }
@@ -441,7 +788,6 @@ async function loadOCR(){
   ocrWorker = Tesseract.createWorker('eng').catch(e => { ocrWorker = null; throw e; });
   return ocrWorker;
 }
-
 async function readImage(canvas){
   if (!canvas) return setStatus('La cámara aún no está lista, espera un segundo.');
   setStatus('Leyendo el código… ⏳');
@@ -449,10 +795,7 @@ async function readImage(canvas){
     const worker = await loadOCR();
     const { data } = await worker.recognize(canvas);
     const code = await extractCode(data.text);
-    if (!code) {
-      setStatus('No pude leer un código. Acerca más la cámara, con buena luz, y vuelve a intentarlo.');
-      return;
-    }
+    if (!code) return setStatus('No pude leer un código. Acerca más la cámara, con buena luz, y vuelve a intentarlo.');
     closeScan();
     $('q').value = code;
     search();
@@ -461,38 +804,45 @@ async function readImage(canvas){
     setStatus('Error al leer la imagen. Inténtalo otra vez.');
   }
 }
-
 // Corrige letras que el lector confunde con números (O→0, I→1…)
 const digits = s => s.replace(/[OQD]/g, '0').replace(/[IL|]/g, '1').replace(/S/g, '5').replace(/B/g, '8').replace(/Z/g, '2');
 
-// Busca el código dentro del texto leído según el juego elegido
 async function extractCode(raw){
   const T = raw.toUpperCase().replace(/[–—_]/g, '-');
   let m;
-  if (game === 'yugioh') {                       // LOB-EN001 / SDY-006
+  if (game === 'yugioh') {
     m = T.match(/\b([A-Z0-9]{2,5})\s*-\s*([A-Z0-9]{3,7})\b/);
     if (m) {
       const reg = (m[2].match(/^(EN|SP|DE|FR|IT|PT|JP|KR|AE|E|S|G|F|I|P)(?=[0-9OQDILSBZ]{3,})/) || [''])[0];
-      const num = digits(m[2].slice(reg.length)).replace(/\D/g, '').slice(-3); // los 3 últimos números
+      const num = digits(m[2].slice(reg.length)).replace(/\D/g, '').slice(-3);
       if (num.length === 3) return `${m[1]}-${reg}${num}`;
     }
   }
-  if (game === 'pokemon') {                      // OBF EN 125/197  o  4/102
+  if (game === 'pokemon') {
     const num = T.match(/([0-9OIL]{1,3})\s*\/\s*([0-9OIL]{2,3})/);
     if (num) {
       const n = digits(num[1]).replace(/^0+(?=\d)/, ''), total = digits(num[2]).replace(/^0+(?=\d)/, '');
       const before = T.slice(Math.max(0, num.index - 20), num.index);
-      const codes = before.match(/\b[A-Z]{3}\b/g) || [];
-      for (const c of codes.reverse()) {
+      for (const c of (before.match(/\b[A-Z]{3}\b/g) || []).reverse())
         if ((await pokemonSetIds(c).catch(() => [])).length) return `${c} ${n}`;
-      }
       return `${n}/${total}`;
     }
   }
-  if (game === 'magic') {                        // 0123 U  ...  MH3 • EN
+  if (game === 'magic') {
     const num = T.match(/\b([0-9OIL]{1,4})(?:\s*\/\s*\d{2,4})?\s+[CURMLSTP]\b/);
     const set = T.match(/\b([A-Z0-9]{3,5})\s*[•·*.+]?\s*(?:EN|ES|DE|FR|IT|PT|JA)\b/);
     if (num && set) return `${set[1]} ${parseInt(digits(num[1]), 10)}`;
+  }
+  if (GAMES[game].type === 'local') {
+    // Busca en el texto cualquier código que exista en los datos del juego (OP01-120, 207/204…)
+    const d = await loadLocal(game).catch(() => null);
+    if (!d) return null;
+    const S = T.replace(/\s*([-\/])\s*/g, '$1');
+    for (const tok of S.match(/[A-Z0-9]{1,8}(?:[-\/][A-Z0-9]{1,8})+/g) || []) {
+      const parts = tok.split(/([-\/])/);
+      const fixed = parts.map((p, i) => i === parts.length - 1 ? digits(p) : p).join(''); // el número final
+      for (const t of [tok, fixed]) if (d.byCode[normCode(t)]) return d.byCode[normCode(t)][0].c.split(' ')[0];
+    }
   }
   return null;
 }
