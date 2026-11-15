@@ -37,6 +37,8 @@
   .big{background:var(--accent-soft);border-radius:12px;padding:14px 16px;margin-bottom:14px}
   .big .lbl{font-size:14px;color:var(--muted)}
   .big .val{font-size:40px;font-weight:800;color:var(--good)}
+  .upd{font-size:13px;color:var(--muted);margin-top:4px}
+  .refresh{margin-left:6px;border:1px solid var(--line);background:var(--card);color:var(--accent);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:13px;font-weight:600}
   table{width:100%;border-collapse:collapse;font-size:15px}
   td{padding:8px 4px;border-bottom:1px solid var(--line)}
   td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
@@ -48,6 +50,19 @@
   .item:hover{border-color:var(--accent)}
   .back{background:none;border:0;color:var(--accent);cursor:pointer;font-size:15px;margin-bottom:10px;padding:0}
   footer{color:var(--muted);font-size:13px;text-align:center;margin-top:30px}
+  /* ---- Escáner ---- */
+  button.cam{font-size:22px;padding:0 16px;border:2px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer}
+  .scan{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;z-index:10;color:#fff}
+  .scan.open{display:flex}
+  .scan p{margin:0 0 12px;text-align:center;font-size:16px}
+  .view{position:relative;width:100%;max-width:520px;border-radius:14px;overflow:hidden;background:#000}
+  .view video{display:block;width:100%;height:auto}
+  .guide{position:absolute;left:8%;width:84%;top:38%;height:24%;border:3px solid #4ade80;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
+  .scanbtns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+  .scanbtns button,.scanbtns label{font-size:17px;padding:12px 20px;border-radius:12px;border:0;cursor:pointer;font-weight:600}
+  .shoot{background:#4ade80;color:#06281a}
+  .sec2{background:#2a2f3a;color:#fff}
+  #scanStatus{min-height:24px;margin-top:12px;text-align:center;font-size:15px;color:#d1d5db}
   @media (max-width:620px){ .result{grid-template-columns:1fr} .result img{max-width:260px;margin:0 auto;display:block} .big .val{font-size:34px} }
 </style>
 </head>
@@ -64,8 +79,24 @@
 
   <form id="form">
     <input id="q" autocomplete="off" placeholder="Código o nombre de la carta">
+    <button type="button" class="cam" id="camBtn" title="Escanear con la cámara" aria-label="Escanear con la cámara">📷</button>
     <button class="go">Buscar</button>
   </form>
+
+  <!-- Ventana del escáner -->
+  <div class="scan" id="scan">
+    <p>Pon el <b>código de la carta</b> dentro del recuadro verde</p>
+    <div class="view">
+      <video id="video" playsinline muted></video>
+      <div class="guide"></div>
+    </div>
+    <div class="scanbtns">
+      <button class="shoot" id="shoot">📸 Leer código</button>
+      <label class="sec2">🖼️ Subir foto<input type="file" id="photo" accept="image/*" hidden></label>
+      <button class="sec2" id="closeScan">Cerrar</button>
+    </div>
+    <div id="scanStatus"></div>
+  </div>
 
   <div class="help" id="help"></div>
   <div id="out"></div>
@@ -111,13 +142,14 @@ $('form').onsubmit = e => { e.preventDefault(); search(); };
 // ===================== UTILIDADES =====================
 const usd = v => (v == null || v === '' || Number(v) === 0) ? null : '$' + Number(v).toFixed(2);
 const eur = v => (v == null || v === '' || Number(v) === 0) ? null : Number(v).toFixed(2).replace('.', ',') + ' €';
+const fecha = d => d ? new Date(d.replace(/\//g, '-')).toLocaleDateString('es-ES') : '';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // Pide datos a la API; si falla, reintenta hasta 3 veces
 async function getJSON(url, tries = 3){
   for (let i = 1; ; i++) {
     try {
-      const r = await fetch(url);
+      const r = await fetch(url, { cache: 'no-store' }); // siempre precio nuevo
       if (r.status === 404 || r.status === 400) return null;
       if (!r.ok) throw new Error('Error ' + r.status);
       return await r.json();
@@ -132,7 +164,7 @@ function loading(){ out.innerHTML = '<div class="msg">Buscando…</div>'; }
 function error(t){ out.innerHTML = `<div class="msg err">${t}</div>`; }
 
 // Dibuja una carta. rows = [[etiqueta, valor] | ['#Sección']]
-function render({img, name, meta, mainLabel, mainValue, rows, links}){
+function render({img, name, meta, mainLabel, mainValue, rows, links, updated, reload}){
   const isSec = r => r[0].startsWith('#');
   const kept = rows.filter(r => isSec(r) || r[1]);
   // quita los títulos de sección que se quedaron sin precios debajo
@@ -147,12 +179,18 @@ function render({img, name, meta, mainLabel, mainValue, rows, links}){
       <div>
         <p class="name">${esc(name)}</p>
         <p class="meta">${meta}</p>
-        <div class="big"><div class="lbl">${mainLabel}</div><div class="val">${mainValue || 'Sin precio'}</div></div>
+        <div class="big"><div class="lbl">${mainLabel}</div><div class="val">${mainValue || 'Sin precio'}</div>
+          <div class="upd">${updated ? 'Datos de Cardmarket del ' + esc(updated) + ' · ' : ''}consultado a las ${new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})}
+            ${reload ? '<button class="refresh" id="refresh">🔄 Actualizar precio</button>' : ''}</div></div>
         <table>${tr || '<tr><td>No hay más precios disponibles</td><td></td></tr>'}</table>
         <div class="links">${links.filter(l => l[1]).map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${l[0]} ↗</a>`).join('')}</div>
       </div>
     </div>`;
   if (lastList) $('back').onclick = () => renderList(lastList);
+  if (reload) $('refresh').onclick = async () => {
+    $('refresh').textContent = 'Actualizando…';
+    try { await reload(); } catch (e) { $('refresh').textContent = '⚠️ Error, reintenta'; }
+  };
 }
 
 // Lista de resultados cuando hay varias cartas
@@ -196,6 +234,8 @@ async function searchPokemon(q){
   let m, query;
   if (/^[a-z0-9.]+-[a-z0-9]+$/i.test(q)) {                          // id: sv3-125
     query = `id:${q.toLowerCase()}`;
+  } else if ((m = q.match(/^0*(\d+)\s*\/\s*0*(\d+)$/))) {                 // 125/197 (sin set)
+    query = `number:${m[1]} set.printedTotal:${m[2]}`;
   } else if ((m = q.match(/^([a-z0-9-]{2,6})\s+0*(\w+?)(?:\/\d+)?$/i))) { // PAL 125 o PAL 125/193
     const ids = await pokemonSetIds(m[1]);
     if (!ids.length) return error(`No conozco el set "${esc(m[1].toUpperCase())}". Revisa el código.`);
@@ -228,7 +268,9 @@ function showPokemon(c){
     meta: `${esc(c.set.name)} · Nº ${esc(c.number)}/${esc(c.set.printedTotal)} · ${esc(c.rarity || '')}`,
     mainLabel: main ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
     mainValue: main || usd(firstTp?.market || firstTp?.mid),
-    rows, links: [['Cardmarket', c.cardmarket?.url], ['TCGplayer', c.tcgplayer?.url]]
+    rows, links: [['Cardmarket', c.cardmarket?.url], ['TCGplayer', c.tcgplayer?.url]],
+    updated: fecha(c.cardmarket?.updatedAt),
+    reload: async () => showPokemon((await getJSON(`${PKM}?q=id:${c.id}`)).data[0])
   });
 }
 
@@ -260,16 +302,17 @@ function showYugioh(c, code){
   const p = c.card_prices?.[0] || {};
   const set = code && (c.card_sets || []).find(s => s.set_code.toUpperCase() === code);
   const rows = [];
-  if (set) rows.push(['#Esta edición'], [`${set.set_code} (${set.set_rarity})`, usd(set.set_price)]);
+  if (set) rows.push(['#Esta edición (TCGplayer)'], [`${set.set_code} (${set.set_rarity})`, usd(set.set_price)]);
   rows.push(['#Precio general de la carta'],
     ['Cardmarket', eur(p.cardmarket_price)], ['TCGplayer', usd(p.tcgplayer_price)],
     ['eBay', usd(p.ebay_price)], ['Amazon', usd(p.amazon_price)], ['CoolStuffInc', usd(p.coolstuffinc_price)]);
-  const main = set ? usd(set.set_price) : eur(p.cardmarket_price);
+  const main = eur(p.cardmarket_price);
   render({
     img: c.card_images?.[0]?.image_url, name: c.name,
     meta: set ? `${esc(set.set_name)} · ${esc(set.set_code)} · ${esc(set.set_rarity)}` : esc(c.type),
-    mainLabel: set ? 'Precio de esta edición (TCGplayer)' : 'Precio más bajo en Cardmarket',
-    mainValue: main || eur(p.cardmarket_price) || usd(p.tcgplayer_price),
+    mainLabel: main ? 'Precio en Cardmarket (desde)' : 'Precio de esta edición (TCGplayer)',
+    mainValue: main || (set && usd(set.set_price)) || usd(p.tcgplayer_price),
+    reload: async () => showYugioh((await getJSON(`${YGO}/cardinfo.php?id=${c.id}`)).data[0], code),
     rows,
     links: [['Cardmarket', `https://www.cardmarket.com/es/YuGiOh/Products/Search?searchString=${encodeURIComponent(c.name)}`],
             ['TCGplayer', `https://www.tcgplayer.com/search/yugioh/product?q=${encodeURIComponent(c.name)}`],
@@ -301,11 +344,134 @@ function showMagic(c){
     img: mtgImg(c, 'normal'), name: c.name,
     meta: `${esc(c.set_name)} · ${esc(c.set.toUpperCase())} ${esc(c.collector_number)} · ${esc(c.rarity)}`,
     mainLabel: eur(p.eur) ? 'Precio en Cardmarket' : 'Precio de referencia',
+    reload: async () => showMagic(await getJSON(`${MTG}/cards/${c.id}`)),
     mainValue: main,
     rows: [['#Cardmarket (Europa)'], ['Normal', eur(p.eur)], ['Foil', eur(p.eur_foil)],
            ['#TCGplayer (EE. UU.)'], ['Normal', usd(p.usd)], ['Foil', usd(p.usd_foil)], ['Etched', usd(p.usd_etched)]],
     links: [['Cardmarket', c.purchase_uris?.cardmarket], ['TCGplayer', c.purchase_uris?.tcgplayer], ['Scryfall', c.scryfall_uri]]
   });
+}
+
+// ===================== ESCÁNER CON CÁMARA =====================
+// Usa la cámara para hacer una foto del código y Tesseract.js para leer el texto.
+let stream = null, ocrWorker = null;
+const video = $('video'), setStatus = t => $('scanStatus').textContent = t;
+
+$('camBtn').onclick = openScan;
+$('closeScan').onclick = closeScan;
+$('shoot').onclick = () => readImage(cropGuide(video, video.videoWidth, video.videoHeight));
+$('photo').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => { readImage(toCanvas(img, img.width, img.height)); URL.revokeObjectURL(img.src); };
+  img.src = URL.createObjectURL(f);
+  e.target.value = '';
+};
+
+async function openScan(){
+  $('scan').classList.add('open');
+  setStatus('');
+  loadOCR().catch(() => {}); // empieza a cargar el lector mientras tanto
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    video.srcObject = stream;
+    await video.play();
+  } catch (e) {
+    setStatus('No se pudo abrir la cámara. Da permiso a la cámara o usa "Subir foto".');
+  }
+}
+
+function closeScan(){
+  $('scan').classList.remove('open');
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+}
+
+// Recorta la zona del recuadro verde (mismas proporciones que en el CSS)
+function cropGuide(src, w, h){
+  if (!w) return null;
+  const x = w * .08, y = h * .38, cw = w * .84, ch = h * .24;
+  return prep(src, x, y, cw, ch);
+}
+// Para fotos subidas usamos la imagen entera
+function toCanvas(src, w, h){ return prep(src, 0, 0, w, h); }
+
+// Agranda la imagen y la pasa a blanco y negro con más contraste para leer mejor
+function prep(src, x, y, w, h){
+  const scale = Math.min(3, 2000 / w);
+  const c = document.createElement('canvas');
+  c.width = w * scale; c.height = h * scale;
+  const g = c.getContext('2d');
+  g.drawImage(src, x, y, w, h, 0, 0, c.width, c.height);
+  const img = g.getImageData(0, 0, c.width, c.height), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+    d[i] = d[i + 1] = d[i + 2] = Math.max(0, Math.min(255, (v - 128) * 1.6 + 128));
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+
+function loadScript(src){
+  return new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
+}
+async function loadOCR(){
+  if (ocrWorker) return ocrWorker;
+  if (!window.Tesseract) await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
+  ocrWorker = Tesseract.createWorker('eng').catch(e => { ocrWorker = null; throw e; });
+  return ocrWorker;
+}
+
+async function readImage(canvas){
+  if (!canvas) return setStatus('La cámara aún no está lista, espera un segundo.');
+  setStatus('Leyendo el código… ⏳');
+  try {
+    const worker = await loadOCR();
+    const { data } = await worker.recognize(canvas);
+    const code = await extractCode(data.text);
+    if (!code) {
+      setStatus('No pude leer un código. Acerca más la cámara, con buena luz, y vuelve a intentarlo.');
+      return;
+    }
+    closeScan();
+    $('q').value = code;
+    search();
+  } catch (e) {
+    console.error(e);
+    setStatus('Error al leer la imagen. Inténtalo otra vez.');
+  }
+}
+
+// Corrige letras que el lector confunde con números (O→0, I→1…)
+const digits = s => s.replace(/[OQD]/g, '0').replace(/[IL|]/g, '1').replace(/S/g, '5').replace(/B/g, '8').replace(/Z/g, '2');
+
+// Busca el código dentro del texto leído según el juego elegido
+async function extractCode(raw){
+  const T = raw.toUpperCase().replace(/[–—_]/g, '-');
+  let m;
+  if (game === 'yugioh') {                       // LOB-EN001 / SDY-006
+    m = T.match(/\b([A-Z0-9]{2,5})\s*-\s*([A-Z]{0,2})\s*([0-9OIL]{3})\b/);
+    if (m) return `${m[1]}-${m[2]}${digits(m[3])}`;
+  }
+  if (game === 'pokemon') {                      // OBF EN 125/197  o  4/102
+    const num = T.match(/([0-9OIL]{1,3})\s*\/\s*([0-9OIL]{2,3})/);
+    if (num) {
+      const n = digits(num[1]).replace(/^0+(?=\d)/, ''), total = digits(num[2]).replace(/^0+(?=\d)/, '');
+      const before = T.slice(Math.max(0, num.index - 20), num.index);
+      const codes = before.match(/\b[A-Z]{3}\b/g) || [];
+      for (const c of codes.reverse()) {
+        if ((await pokemonSetIds(c).catch(() => [])).length) return `${c} ${n}`;
+      }
+      return `${n}/${total}`;
+    }
+  }
+  if (game === 'magic') {                        // 0123 U  ...  MH3 • EN
+    const num = T.match(/\b([0-9OIL]{1,4})(?:\s*\/\s*\d{2,4})?\s+[CURMLSTP]\b/);
+    const set = T.match(/\b([A-Z0-9]{3,5})\s*[•·*.+]?\s*(?:EN|ES|DE|FR|IT|PT|JA)\b/);
+    if (num && set) return `${set[1]} ${parseInt(digits(num[1]), 10)}`;
+  }
+  return null;
 }
 
 showHelp();
