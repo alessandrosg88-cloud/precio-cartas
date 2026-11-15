@@ -80,6 +80,20 @@
   .bar h2{font-size:20px;margin:0}
   .bar select{font-size:15px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
   .back{background:none;border:0;color:var(--accent);cursor:pointer;font-size:15px;margin-bottom:10px;padding:0}
+  .gbtn{display:inline-block;margin-top:10px;padding:8px 14px;border-radius:10px;border:0;background:var(--accent);color:#fff;font-weight:700;font-size:15px;cursor:pointer}
+  details.howto{margin:16px 0 0;border:2px solid var(--accent-soft);border-radius:12px;padding:10px 14px}
+  details.howto summary{cursor:pointer;font-weight:700;font-size:16px}
+  .howto p{margin:10px 0;font-size:15px}
+  .howto ul{margin:6px 0;padding-left:20px;font-size:15px}
+  .ctext{background:var(--bg);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:14px;line-height:1.5}
+  .ctext .lbl2,.howto .lbl2{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+  table.stats td{font-size:14px;padding:5px 4px}
+  .guide{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .guide h2{margin:0 0 14px}
+  .gstep{display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--line)}
+  .gico{font-size:30px;line-height:1}
+  .gstep h3{margin:0 0 4px;font-size:17px}
+  .gstep p{margin:0;font-size:16px;line-height:1.55}
   footer{color:var(--muted);font-size:13px;text-align:center;margin-top:30px}
   /* ---- Escáner ---- */
   button.cam{font-size:22px;padding:0 16px;border:2px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer}
@@ -131,6 +145,8 @@
   <footer>Precios: Cardmarket (guía de precios pública) · TCGplayer · tcgdex.net · ygoprodeck.com · scryfall.com — orientativos.</footer>
 </div>
 
+<script src="guias.js"></script>
+<script src="como-se-usa.js"></script>
 <script>
 // =====================================================================
 //  JUEGOS
@@ -192,7 +208,9 @@ document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
 
 function showHelp(){
   const g = GAMES[game];
-  $('help').innerHTML = g.help + '<br>Ejemplos: ' + g.ex.map(e => `<span class="ex">${e}</span>`).join('');
+  $('help').innerHTML = g.help + '<br>Ejemplos: ' + g.ex.map(e => `<span class="ex">${e}</span>`).join('') +
+    `<br><button class="gbtn" id="gbtn">📖 Cómo se juega a ${g.label}</button>`;
+  $('gbtn').onclick = () => { backStack = []; current = null; showGuide(game); };
   $('help').querySelectorAll('.ex').forEach(el => el.onclick = () => { $('q').value = el.textContent; search(); });
 }
 $('form').onsubmit = e => { e.preventDefault(); search(); };
@@ -344,9 +362,16 @@ function render(v){
           ${v.openSet ? '<button class="main" id="openSet">📚 Ver la expansión entera</button>' : ''}
           ${v.links.filter(l => l[1]).map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${l[0]} ↗</a>`).join('')}
         </div>
+        ${v.howto ? `<details class="howto" open><summary>📖 Cómo se usa esta carta</summary><div id="howto"><p>Cargando…</p></div></details>` : ''}
         ${gradingHTML(v.value)}
       </div>
     </div>`;
+  if (v.howto) {
+    const me = current, idx = current?.index;
+    Promise.resolve().then(v.howto).then(html => {
+      if (current === me && current?.index === idx && $('howto')) $('howto').innerHTML = html;
+    }).catch(() => { if ($('howto')) $('howto').innerHTML = '<p>No se pudo cargar la explicación.</p>'; });
+  }
   wireBack();
   if (n > 1) { $('prev').onclick = () => go(-1); $('next').onclick = () => go(1); }
   drawPicker();
@@ -525,6 +550,7 @@ function pokemonView(c){
     updated: cm.updated ? 'Cardmarket del ' + fecha(cm.updated) : '',
     reload: async () => { pkmCache[c.id] = await getJSON(`${PKM}/cards/${c.id}`); drawCurrent(); },
     openSet: c.set?.id ? () => openPokemonSet(c.set.id) : null,
+    howto: () => howtoPokemon(c.id),
   };
 }
 
@@ -594,6 +620,7 @@ function yugiohView(c, set){
             ['Ficha', c.ygoprodeck_url]],
     reload: async () => { const n = (await getJSON(`${YGO}/cardinfo.php?id=${c.id}`))?.data?.[0]; if (n) { Object.assign(c, n); drawCurrent(); } },
     openSet: set ? () => openYugiohSet(set.set_name) : null,
+    howto: () => howtoYugioh(c),
   };
 }
 
@@ -655,6 +682,7 @@ function magicView(c){
     links: [['Cardmarket', c.purchase_uris?.cardmarket], ['TCGplayer', c.purchase_uris?.tcgplayer], ['Scryfall', c.scryfall_uri]],
     reload: async () => { const n = await getJSON(`${MTG}/cards/${c.id}`); if (n) { Object.assign(c, n); drawCurrent(); } },
     openSet: () => openMagicSet(c.set, c.set_name),
+    howto: () => howtoMagic(c),
   };
 }
 
@@ -769,6 +797,7 @@ function localView(key, c){
     approx: c.e && c.ea ? '≈ Esta carta tiene varias versiones: comprueba en Cardmarket que sea la tuya.' : '',
     rows,
     links: [['Cardmarket', cmLink], ['TCGplayer', `https://www.tcgplayer.com/product/${c.id}`]],
+    howto: () => howtoLocal(key, c),
     updated: c.e ? 'Cardmarket del ' + fecha(d.cmUpdated || d.updated) : 'TCGplayer del ' + fecha(d.updated),
     openSet: () => {
       const list = d.cards.filter(x => x.g === c.g)
