@@ -1,0 +1,161 @@
+// Descarga cada día los precios de los juegos "extra" y los guarda en /data/<juego>.json
+//  - Cartas, códigos, rarezas y precio en $ : TCGplayer (vía tcgcsv.com, datos públicos diarios)
+//  - Precio en € : guía de precios pública de Cardmarket (archivos oficiales diarios)
+// No necesita ninguna API key. Se ejecuta con: node scripts/update-data.mjs
+import { writeFile, mkdir } from 'node:fs/promises';
+
+const GAMES = {
+  onepiece: { name: 'One Piece',          tcg: [68],     cm: 18 },
+  dragonball: { name: 'Dragon Ball',      tcg: [80, 27], cm: 13 },
+  digimon:  { name: 'Digimon',            tcg: [63],     cm: 17 },
+  lorcana:  { name: 'Lorcana',            tcg: [71],     cm: 19 },
+  gundam:   { name: 'Gundam',             tcg: [86],     cm: 24 },
+  riftbound:{ name: 'League of Legends (Riftbound)', tcg: [89], cm: 22 },
+  weiss:    { name: 'Weiß Schwarz',       tcg: [20],     cm: 10 },
+  wow:      { name: 'World of Warcraft',  tcg: [13],     cm: 2 },
+};
+const only = process.argv[2]; // opcional: actualizar solo un juego
+
+const UA = { 'User-Agent': 'precio-cartas (github.com/alessandrosg88-cloud/precio-cartas)' };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function getJSON(url, headers = {}, tries = 4){
+  for (let i = 1; ; i++) {
+    try {
+      const r = await fetch(url, { headers: { ...UA, ...headers } });
+      if (!r.ok) throw new Error(`${r.status} ${url}`);
+      return await r.json();
+    } catch (e) {
+      if (i >= tries) throw e;
+      await sleep(1500 * i);
+    }
+  }
+}
+// Ejecuta tareas de pocas en pocas para no saturar el servidor
+async function pool(items, n, fn){
+  const out = []; let i = 0;
+  await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) { const k = i++; out[k] = await fn(items[k]); } }));
+  return out;
+}
+const norm = s => String(s || '').toLowerCase()
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/\(.*?\)|\[.*?\]/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+const r2 = v => v == null || v === 0 ? null : Math.round(v * 100) / 100;
+
+// ---------- TCGplayer (tcgcsv) ----------
+async function loadTcg(categoryId){
+  const groups = (await getJSON(`https://tcgcsv.com/tcgplayer/${categoryId}/groups`)).results;
+  const sets = {}, cards = [];
+  await pool(groups, 4, async g => {
+    const [prods, prices] = await Promise.all([
+      getJSON(`https://tcgcsv.com/tcgplayer/${categoryId}/${g.groupId}/products`).catch(() => ({ results: [] })),
+      getJSON(`https://tcgcsv.com/tcgplayer/${categoryId}/${g.groupId}/prices`).catch(() => ({ results: [] })),
+    ]);
+    const byId = {};
+    for (const p of prices.results || []) (byId[p.productId] ||= []).push(p);
+    let n = 0;
+    for (const p of prods.results || []) {
+      const ext = Object.fromEntries((p.extendedData || []).map(e => [e.name, e.value]));
+      if (!ext.Number && !ext.Rarity) continue; // no es una carta suelta
+      const pr = byId[p.productId] || [];
+      const main = pr.find(x => /normal/i.test(x.subTypeName)) || pr[0] || {};
+      const foil = pr.find(x => x !== main && /foil|holo/i.test(x.subTypeName));
+      cards.push({
+        id: p.productId, n: p.name, c: ext.Number || '', r: ext.Rarity || '', g: g.groupId,
+        u: r2(main.marketPrice ?? main.midPrice), ul: r2(main.lowPrice),
+        uf: foil ? r2(foil.marketPrice ?? foil.midPrice) : null,
+      });
+      n++;
+    }
+    if (n) sets[g.groupId] = { n: g.name, a: g.abbreviation || '', d: (g.publishedOn || '').slice(0, 10) };
+  });
+  return { sets, cards };
+}
+
+// ---------- Cardmarket (archivos públicos oficiales) ----------
+const CM = 'https://downloads.s3.cardmarket.com/productCatalog';
+const CM_HEADERS = { Referer: 'https://www.cardmarket.com/' };
+async function loadCardmarket(idGame){
+  const [prods, guide] = await Promise.all([
+    getJSON(`${CM}/productList/products_singles_${idGame}.json`, CM_HEADERS),
+    getJSON(`${CM}/priceGuide/price_guide_${idGame}.json`, CM_HEADERS),
+  ]);
+  const products = prods.products || prods;
+  const prices = {};
+  for (const p of guide.priceGuides || guide) prices[p.idProduct] = p;
+  console.log(`   Cardmarket: ${products.length} productos, ${Object.keys(prices).length} precios. Ejemplo:`,
+    JSON.stringify(products[0]), JSON.stringify(Object.values(prices)[0]));
+  return { products, prices, updated: guide.createdAt || prods.createdAt || null };
+}
+
+// Une cada carta de TCGplayer con su producto de Cardmarket:
+// 1) empareja expansiones por los nombres de cartas que comparten
+// 2) dentro de cada expansión, empareja por nombre; si hay varias versiones con el
+//    mismo nombre, las ordena por precio (la más barata con la más barata) y las marca como aproximadas
+function matchCardmarket(tcg, cm){
+  const byExp = {};
+  for (const p of cm.products) (byExp[p.idExpansion] ||= []).push(p);
+  const byGroup = {};
+  for (const c of tcg.cards) (byGroup[c.g] ||= []).push(c);
+
+  const expNames = Object.fromEntries(Object.entries(byExp).map(([e, ps]) => [e, new Set(ps.map(p => norm(p.name)))]));
+  let matched = 0;
+  for (const [g, cards] of Object.entries(byGroup)) {
+    const names = new Set(cards.map(c => norm(c.n)));
+    let best = null, bestScore = 0;
+    for (const [e, set] of Object.entries(expNames)) {
+      let inter = 0; for (const n of names) if (set.has(n)) inter++;
+      const score = inter / Math.max(names.size, set.size);
+      if (score > bestScore) { bestScore = score; best = e; }
+    }
+    if (!best || bestScore < 0.5) continue;
+    const cmByName = {};
+    for (const p of byExp[best]) (cmByName[norm(p.name)] ||= []).push(p);
+    const tcgByName = {};
+    for (const c of cards) (tcgByName[norm(c.n)] ||= []).push(c);
+    for (const [n, list] of Object.entries(tcgByName)) {
+      const cmList = cmByName[n]; if (!cmList) continue;
+      const price = p => cm.prices[p.idProduct]?.trend ?? cm.prices[p.idProduct]?.avg ?? Infinity;
+      const a = [...list].sort((x, y) => (x.u ?? Infinity) - (y.u ?? Infinity));
+      const b = [...cmList].sort((x, y) => price(x) - price(y));
+      const approx = a.length > 1 || b.length > 1;
+      a.forEach((c, i) => {
+        const p = b[Math.min(i, b.length - 1)], pg = cm.prices[p.idProduct];
+        if (!pg) return;
+        c.cm = p.idProduct;
+        c.e = r2(pg.trend ?? pg.avg); c.el = r2(pg.low); c.e30 = r2(pg.avg30);
+        c.ef = r2(pg['trend-foil'] ?? pg['trend-holo']);
+        if (approx && a.length !== b.length) c.ea = 1; // emparejamiento aproximado
+        matched++;
+      });
+    }
+  }
+  return matched;
+}
+
+await mkdir('data', { recursive: true });
+const index = {};
+for (const [key, G] of Object.entries(GAMES)) {
+  if (only && only !== key) continue;
+  console.log(`\n== ${G.name} ==`);
+  try {
+    const all = { sets: {}, cards: [] };
+    for (const cat of G.tcg) {
+      const t = await loadTcg(cat);
+      Object.assign(all.sets, t.sets); all.cards.push(...t.cards);
+    }
+    console.log(`   TCGplayer: ${all.cards.length} cartas en ${Object.keys(all.sets).length} sets`);
+    let cmUpdated = null;
+    try {
+      const cm = await loadCardmarket(G.cm);
+      cmUpdated = cm.updated;
+      console.log(`   Emparejadas con Cardmarket: ${matchCardmarket(all, cm)}`);
+    } catch (e) { console.log('   ⚠️ Cardmarket no disponible:', e.message); }
+    const out = { game: G.name, updated: new Date().toISOString(), cmUpdated, sets: all.sets, cards: all.cards };
+    await writeFile(`data/${key}.json`, JSON.stringify(out));
+    index[key] = { name: G.name, cards: all.cards.length, updated: out.updated };
+  } catch (e) {
+    console.log(`   ❌ Error en ${G.name}:`, e.message);
+  }
+}
+if (!only) await writeFile('data/index.json', JSON.stringify(index, null, 1));
+console.log('\nListo.');
