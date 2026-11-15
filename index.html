@@ -694,6 +694,13 @@ async function loadLocal(key){
   return (localData[key] = d);
 }
 const tcgImg = (c, big) => `https://tcgplayer-cdn.tcgplayer.com/product/${c.id}_${big ? 'in_1000x1000' : '200w'}.jpg`;
+// Rareza + tipo de versión sacado del nombre: "SEC · Alt Art", "SEC · Manga", "SR · Parallel"…
+const localRarity = c => {
+  const tags = [...String(c.n).matchAll(/[(\[]([^)\]]+)[)\]]/g)].map(m => m[1].trim())
+    .filter(t => normCode(t) !== c.k1 && normCode(t) !== c.k && !/^[\d\s]+$/.test(t))
+    .map(t => t.replace(/Alternate Art/i, 'Alt Art'));
+  return [c.r, ...tags].filter(Boolean).join(' · ');
+};
 const localValue = c => c.e || c.u || null;
 const localPrice = c => eur(c.e) || usd(c.u);
 
@@ -742,7 +749,7 @@ function openLocal(c, versions){
   const key = game;
   const idx = versions.indexOf(c);
   return showVersions(versions, idx < 0 ? 0 : idx, async x => localView(key, x),
-    x => ({ r: x.r, t: x.n + (x.c ? ' · ' + x.c : ''), p: localPrice(x) }));
+    x => ({ r: localRarity(x), t: x.c || x.n, p: localPrice(x) }));
 }
 
 function localView(key, c){
@@ -754,8 +761,8 @@ function localView(key, c){
     ? `https://www.cardmarket.com/es/${g.cm}/Products?idProduct=${c.cm}`
     : `https://www.cardmarket.com/es/${g.cm}/Products/Search?searchString=${encodeURIComponent(c.n.replace(/\(.*?\)/g, '').trim())}`;
   return {
-    img: tcgImg(c, true), name: c.n, rarity: c.r,
-    versionLabel: [c.r, c.c].filter(Boolean).join(' · '),
+    img: tcgImg(c, true), name: c.n, rarity: localRarity(c),
+    versionLabel: [localRarity(c), c.c].filter(Boolean).join(' · '),
     meta: `${esc(set.n || '')}${c.c ? ' · ' + esc(c.c) : ''}`,
     mainLabel: c.e ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
     mainValue: localPrice(c), value: localValue(c),
