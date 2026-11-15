@@ -39,7 +39,7 @@
   .arrow:hover{border-color:var(--accent);color:var(--accent)}
   .vlabel{text-align:center;font-size:13px;color:var(--muted);line-height:1.3}
   .vlabel b{display:block;color:var(--text);font-size:14px}
-  .picker{margin-top:12px}
+  .picker{margin:0 0 14px}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
   .chip{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer}
   .chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
@@ -278,7 +278,7 @@ function drawPicker(){
   labels.forEach(l => { const x = rars.find(x => x.r === l.r); if (x) x.count++; });
   const curR = labels[i].r;
   box.innerHTML = `
-    ${rars.length > 1 && rars.length <= 20 ? `<p class="lbl2">Elige la rareza</p><div class="chips">${rars.map(x =>
+    ${rars.length > 1 && rars.length <= 20 ? `<p class="lbl2">Todas las rarezas de esta carta (${rars.length})</p><div class="chips">${rars.map(x =>
       `<button class="chip${x.r === curR ? ' on' : ''}" data-r="${esc(x.r)}">${esc(x.r)}${x.count > 1 ? `<small>×${x.count}</small>` : ''}</button>`).join('')}</div>` : ''}
     <p class="lbl2">Elige la versión</p>
     <select id="vsel">${labels.map((l, k) =>
@@ -329,12 +329,12 @@ function render(v){
             <div class="vlabel"><b>Versión ${i + 1} de ${n}</b>${esc(v.versionLabel || v.rarity || '')}</div>
             <button class="arrow" id="next" aria-label="Versión siguiente">›</button>
           </div>${dots}` : ''}
-        <div class="picker" id="vpick"></div>
       </div>
       <div>
         <p class="name">${esc(v.name)}</p>
         <p class="meta">${v.meta}</p>
         ${v.rarity ? `<span class="rar">✦ ${esc(v.rarity)}</span>` : ''}
+        <div class="picker" id="vpick"></div>
         <div class="big"><div class="lbl">${v.mainLabel}</div><div class="val">${v.mainValue || 'Sin precio'}</div>
           ${v.approx ? `<div class="approx">${v.approx}</div>` : ''}
           <div class="upd">${v.updated ? esc(v.updated) + ' · ' : ''}consultado a las ${new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})}
