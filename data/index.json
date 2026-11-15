@@ -2,41 +2,41 @@
  "onepiece": {
   "name": "One Piece",
   "cards": 7514,
-  "updated": "2026-11-15T23:14:23.648Z"
+  "updated": "2026-11-15T23:19:53.771Z"
  },
  "dragonball": {
   "name": "Dragon Ball",
   "cards": 16590,
-  "updated": "2026-11-15T23:14:24.650Z"
+  "updated": "2026-11-15T23:19:54.425Z"
  },
  "digimon": {
   "name": "Digimon",
   "cards": 9563,
-  "updated": "2026-11-15T23:14:25.379Z"
+  "updated": "2026-11-15T23:19:54.818Z"
  },
  "lorcana": {
   "name": "Lorcana",
   "cards": 3810,
-  "updated": "2026-11-15T23:14:25.539Z"
+  "updated": "2026-11-15T23:19:55.029Z"
  },
  "gundam": {
   "name": "Gundam",
   "cards": 2201,
-  "updated": "2026-11-15T23:14:25.684Z"
+  "updated": "2026-11-15T23:19:55.113Z"
  },
  "riftbound": {
   "name": "League of Legends (Riftbound)",
   "cards": 1804,
-  "updated": "2026-11-15T23:14:25.774Z"
+  "updated": "2026-11-15T23:19:55.198Z"
  },
  "weiss": {
   "name": "Weiß Schwarz",
   "cards": 31867,
-  "updated": "2026-11-15T23:14:27.010Z"
+  "updated": "2026-11-15T23:19:56.172Z"
  },
  "wow": {
   "name": "World of Warcraft",
   "cards": 4672,
-  "updated": "2026-11-15T23:14:27.548Z"
+  "updated": "2026-11-15T23:19:56.366Z"
  }
 }
