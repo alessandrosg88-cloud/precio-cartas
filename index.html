@@ -323,14 +323,14 @@ function showYugioh(c, code){
   const rows = [];
   if (set) rows.push(['#Esta edición (TCGplayer)'], [`${set.set_code} (${set.set_rarity})`, usd(set.set_price)]);
   rows.push(['#Precio general de la carta'],
-    ['Cardmarket', eur(p.cardmarket_price)], ['TCGplayer', usd(p.tcgplayer_price)],
+    ['Cardmarket (la edición más barata)', eur(p.cardmarket_price)], ['TCGplayer', usd(p.tcgplayer_price)],
     ['eBay', usd(p.ebay_price)], ['Amazon', usd(p.amazon_price)], ['CoolStuffInc', usd(p.coolstuffinc_price)]);
-  const main = eur(p.cardmarket_price);
+  const main = set ? usd(set.set_price) : eur(p.cardmarket_price);
   render({
     img: c.card_images?.[0]?.image_url, name: c.name,
     meta: set ? `${esc(set.set_name)} · ${esc(set.set_code)} · ${esc(set.set_rarity)}` : esc(c.type),
-    mainLabel: main ? 'Precio en Cardmarket (desde)' : 'Precio de esta edición (TCGplayer)',
-    mainValue: main || (set && usd(set.set_price)) || usd(p.tcgplayer_price),
+    mainLabel: set ? `Precio de esta edición exacta (${esc(set.set_rarity)})` : 'Precio en Cardmarket (desde)',
+    mainValue: main || eur(p.cardmarket_price) || usd(p.tcgplayer_price),
     reload: async () => showYugioh((await getJSON(`${YGO}/cardinfo.php?id=${c.id}`)).data[0], code),
     rows,
     links: [['Cardmarket', `https://www.cardmarket.com/es/YuGiOh/Products/Search?searchString=${encodeURIComponent(c.name)}`],
