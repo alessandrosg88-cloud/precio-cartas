@@ -215,6 +215,7 @@ async function getJSON(url, tries = 4){
 
 function loading(t = 'Buscando…'){ out.innerHTML = `<div class="msg">${t}</div>`; }
 function error(t){ out.innerHTML = `<div class="msg err">${t}</div>`; }
+function toTop(){ if (out.getBoundingClientRect().top < 0) out.scrollIntoView({ block: 'start' }); }
 function remember(fn){ backStack.push(fn); }
 function backBtn(){ return backStack.length ? '<button class="back" id="back">← Volver</button>' : ''; }
 function wireBack(){ const b = $('back'); if (b) b.onclick = () => { const fn = backStack.pop(); fn && fn(); }; }
@@ -249,6 +250,7 @@ let current = null;
 async function showVersions(items, index, build){
   current = { items, index: Math.max(0, index), build };
   await drawCurrent();
+  toTop();
 }
 
 async function go(step){
@@ -354,6 +356,7 @@ function renderGrid(title, items, { sort } = {}){
     }
   };
   let sortMode = 'num';
+  setTimeout(toTop);
   const sorted = () => sortMode === 'num' ? items : [...items].sort((a, b) =>
     sortMode === 'hi' ? (b.v ?? -1) - (a.v ?? -1) : (a.v ?? 1e9) - (b.v ?? 1e9));
   draw(items);
@@ -629,6 +632,7 @@ async function loadLocal(key){
     c.k = normCode(c.c);              // código completo
     c.k1 = normCode(String(c.c).split(' ')[0]); // sin la rareza (Digimon: "BT1-084 SR")
     c.nn = normName(c.n);
+    c.b = normName(c.n.replace(/\(.*?\)|\[.*?\]/g, '')).trim(); // nombre sin "(Alternate Art)"…
     for (const k of new Set([c.k, c.k1])) if (k) (d.byCode[k] ||= []).push(c);
   }
   return (localData[key] = d);
@@ -649,13 +653,16 @@ async function searchLocal(q){
       return gridLocal(`${found.length} cartas`, found);
     }
   }
-  if (found.length) return openLocal(found[0], sameCard(d, found[0]));
+  if (found.length) {
+    if (new Set(found.map(c => c.b)).size > 1) return gridLocal(`${found.length} cartas con ese código`, found);
+    const v = sameCard(d, found[0]); return openLocal(v[0], v); // empieza por la versión normal
+  }
   const words = normName(q).split(/\s+/).filter(Boolean);
   const byName = d.cards.filter(c => words.every(w => c.nn.includes(w)));
   if (!byName.length) return error('No encontré esa carta. Revisa el código o escribe el nombre en inglés.');
   // agrupa las versiones de la misma carta y muestra una por grupo
   const groups = {};
-  for (const c of byName) (groups[c.k1 || c.nn] ||= []).push(c);
+  for (const c of byName) (groups[c.k1 + '|' + c.b] ||= []).push(c);
   const reps = Object.values(groups).map(g => g.sort((a, b) => (localValue(a) ?? 1e9) - (localValue(b) ?? 1e9))[0]);
   if (reps.length === 1) return openLocal(reps[0], sameCard(d, reps[0]));
   gridLocal(`${reps.length} resultados`, reps);
@@ -663,7 +670,7 @@ async function searchLocal(q){
 
 // Todas las versiones (rarezas, paralelas, alt art…) de la misma carta
 function sameCard(d, c){
-  const list = c.k1 ? d.byCode[c.k1] : d.cards.filter(x => x.nn === c.nn);
+  const list = c.k1 ? d.byCode[c.k1].filter(x => x.b === c.b) : d.cards.filter(x => x.b === c.b);
   return [...new Set(list)].sort((a, b) => (localValue(a) ?? 1e9) - (localValue(b) ?? 1e9));
 }
 
@@ -695,10 +702,10 @@ function localView(key, c){
     meta: `${esc(set.n || '')}${c.c ? ' · ' + esc(c.c) : ''}`,
     mainLabel: c.e ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
     mainValue: localPrice(c), value: localValue(c),
-    approx: c.e && c.ea ? '≈ Hay varias versiones de esta carta en Cardmarket: comprueba que sea la tuya en el enlace.' : '',
+    approx: c.e && c.ea ? '≈ Esta carta tiene varias versiones: comprueba en Cardmarket que sea la tuya.' : '',
     rows,
     links: [['Cardmarket', cmLink], ['TCGplayer', `https://www.tcgplayer.com/product/${c.id}`]],
-    updated: 'Precios del ' + fecha(d.updated),
+    updated: c.e ? 'Cardmarket del ' + fecha(d.cmUpdated || d.updated) : 'TCGplayer del ' + fecha(d.updated),
     openSet: () => {
       const list = d.cards.filter(x => x.g === c.g)
         .sort((a, b) => String(a.c).localeCompare(String(b.c), 'en', { numeric: true }));
