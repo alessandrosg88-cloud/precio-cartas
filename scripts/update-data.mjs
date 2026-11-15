@@ -2,7 +2,7 @@
 //  - Cartas, códigos, rarezas y precio en $ : TCGplayer (vía tcgcsv.com, datos públicos diarios)
 //  - Precio en € : guía de precios pública de Cardmarket (archivos oficiales diarios)
 // No necesita ninguna API key. Se ejecuta con: node scripts/update-data.mjs
-import { writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, mkdir, rm } from 'node:fs/promises';
 
 const GAMES = {
   onepiece: { name: 'One Piece',          tcg: [68],     cm: 18 },
@@ -47,7 +47,7 @@ const r2 = v => v == null || v === 0 ? null : Math.round(v * 100) / 100;
 // ---------- TCGplayer (tcgcsv) ----------
 async function loadTcg(categoryId){
   const groups = (await getJSON(`https://tcgcsv.com/tcgplayer/${categoryId}/groups`)).results;
-  const sets = {}, cards = [];
+  const sets = {}, cards = [], texts = {}, fields = new Set();
   await pool(groups, 4, async g => {
     const [prods, prices] = await Promise.all([
       getJSON(`https://tcgcsv.com/tcgplayer/${categoryId}/${g.groupId}/products`).catch(() => ({ results: [] })),
@@ -59,6 +59,10 @@ async function loadTcg(categoryId){
     for (const p of prods.results || []) {
       const ext = Object.fromEntries((p.extendedData || []).map(e => [e.name, e.value]));
       if (!ext.Number && !ext.Rarity) continue; // no es una carta suelta
+      // Texto y datos de la carta (efecto, coste, poder…) para "Cómo se usa esta carta"
+      const t = {};
+      for (const e of p.extendedData || []) if (!['Number', 'Rarity'].includes(e.name) && e.value) { t[e.displayName || e.name] = e.value; fields.add(e.displayName || e.name); }
+      if (Object.keys(t).length) (texts[g.groupId] ||= {})[p.productId] = t;
       const pr = byId[p.productId] || [];
       const main = pr.find(x => /normal/i.test(x.subTypeName)) || pr[0] || {};
       const foil = pr.find(x => x !== main && /foil|holo/i.test(x.subTypeName));
@@ -71,7 +75,8 @@ async function loadTcg(categoryId){
     }
     if (n) sets[g.groupId] = { n: g.name, a: g.abbreviation || '', d: (g.publishedOn || '').slice(0, 10) };
   });
-  return { sets, cards };
+  console.log(`   Campos de texto: ${[...fields].join(', ')}`);
+  return { sets, cards, texts };
 }
 
 // ---------- Cardmarket (archivos públicos oficiales) ----------
@@ -168,10 +173,10 @@ for (const [key, G] of Object.entries(GAMES)) {
   if (only && only !== key) continue;
   console.log(`\n== ${G.name} ==`);
   try {
-    const all = { sets: {}, cards: [] };
+    const all = { sets: {}, cards: [], texts: {} };
     for (const cat of G.tcg) {
       const t = await loadTcg(cat);
-      Object.assign(all.sets, t.sets); all.cards.push(...t.cards);
+      Object.assign(all.sets, t.sets); all.cards.push(...t.cards); Object.assign(all.texts, t.texts);
     }
     console.log(`   TCGplayer: ${all.cards.length} cartas en ${Object.keys(all.sets).length} sets`);
     let cmUpdated = null;
@@ -182,6 +187,10 @@ for (const [key, G] of Object.entries(GAMES)) {
     } catch (e) { console.log('   ⚠️ Cardmarket no disponible:', e.message); }
     const out = { game: G.name, updated: new Date().toISOString(), cmUpdated, sets: all.sets, cards: all.cards };
     await writeFile(`data/${key}.json`, JSON.stringify(out));
+    // textos: un archivo por expansión, así la web solo descarga lo que necesita
+    await rm(`data/text/${key}`, { recursive: true, force: true });
+    await mkdir(`data/text/${key}`, { recursive: true });
+    for (const [g, t] of Object.entries(all.texts)) await writeFile(`data/text/${key}/${g}.json`, JSON.stringify(t));
     index[key] = { name: G.name, cards: all.cards.length, updated: out.updated };
   } catch (e) {
     console.log(`   ❌ Error en ${G.name}:`, e.message);
