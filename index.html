@@ -103,6 +103,9 @@
   .gico{font-size:30px;line-height:1}
   .gstep h3{margin:0 0 4px;font-size:17px}
   .gstep p{margin:0;font-size:16px;line-height:1.55}
+  .sfilters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+  .sfind{width:100%;font-size:16px;padding:10px 12px;margin:0 0 10px}
+  .more{display:block;margin:14px auto;padding:10px 18px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--accent);font-weight:700;cursor:pointer}
   footer{color:var(--muted);font-size:13px;text-align:center;margin-top:30px}
   /* ---- Escáner ---- */
   button.cam{font-size:22px;padding:0 16px;border:2px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer}
@@ -171,13 +174,13 @@
 //  type 'links' -> no hay base de datos de precios pública: enlaces de búsqueda
 // =====================================================================
 const GAMES = {
-  pokemon:   { label: 'Pokémon', type: 'api',
+  pokemon:   { label: 'Pokémon', type: 'api', cm: 'Pokemon',
     help: 'Usa el <b>código del set + número</b> de abajo de la carta (ej. <b>OBF 125</b>), solo el número (<b>125/197</b>) o el nombre en inglés.',
     ex: ['OBF 125', '125/197', 'base1-4', 'Pikachu'] },
-  yugioh:    { label: 'Yu-Gi-Oh!', type: 'api',
+  yugioh:    { label: 'Yu-Gi-Oh!', type: 'api', cm: 'YuGiOh',
     help: 'Usa el <b>código impreso</b> debajo de la imagen (ej. <b>LOB-EN001</b>). También en español (<b>LOB-SP001</b>) o el nombre en inglés.',
     ex: ['LOB-EN001', 'SDY-006', 'Dark Magician'] },
-  magic:     { label: 'Magic', type: 'api',
+  magic:     { label: 'Magic', type: 'api', cm: 'Magic',
     help: 'Usa el <b>código del set + número</b> de abajo a la izquierda (ej. <b>MH3 123</b>) o el nombre en inglés.',
     ex: ['MH3 123', 'LEA 232', 'Lightning Bolt'] },
   onepiece:  { label: 'One Piece', type: 'local', cm: 'OnePiece',
@@ -245,8 +248,10 @@ showGame();
 function showHelp(){
   const g = GAMES[game];
   $('help').innerHTML = g.help + '<br>Ejemplos: ' + g.ex.map(e => `<span class="ex">${e}</span>`).join('') +
-    `<br><button class="gbtn" id="gbtn">📖 Cómo se juega a ${g.label}</button>`;
+    `<br><button class="gbtn" id="gbtn">📖 Cómo se juega a ${g.label}</button>` +
+    (g.type !== 'links' ? ` <button class="gbtn" id="sbtn">📦 Cajas selladas</button>` : '');
   $('gbtn').onclick = () => { backStack = []; current = null; showGuide(game); };
+  if ($('sbtn')) $('sbtn').onclick = () => { backStack = []; current = null; showSealed(game); };
   $('help').querySelectorAll('.ex').forEach(el => el.onclick = () => { $('q').value = el.textContent; search(); });
 }
 $('form').onsubmit = e => { e.preventDefault(); search(); };
@@ -399,7 +404,7 @@ function render(v){
           ${v.links.filter(l => l[1]).map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${l[0]} ↗</a>`).join('')}
         </div>
         ${v.howto ? `<details class="howto" open><summary>📖 Cómo se usa esta carta</summary><div id="howto"><p>Cargando…</p></div></details>` : ''}
-        ${gradingHTML(v.value)}
+        ${v.sealed ? '' : gradingHTML(v.value)}
       </div>
     </div>`;
   if (v.howto) {
@@ -841,6 +846,75 @@ function localView(key, c){
       gridLocal(`${esc(set.n || 'Expansión')} · ${list.length} cartas`, list, { sort: true });
     },
   };
+}
+
+// =====================================================================
+//  CAJAS SELLADAS (booster box, ETB, sobres, mazos…) — data/sealed/<juego>.json
+// =====================================================================
+const SEALED_TYPES = { box: '📦 Cajas de sobres', etb: '🎁 Elite Trainer Box', case: '🗃️ Cajas máster (case)',
+  pack: '🃏 Sobres', deck: '🂠 Mazos', coll: '🎀 Colecciones y packs', other: '➕ Otros' };
+const sealedData = {};
+async function showSealed(key){
+  loading('Cargando productos sellados…');
+  if (!sealedData[key]) {
+    const r = await fetch(`data/sealed/${key}.json`).catch(() => null);
+    if (!r || !r.ok) return error('Los precios de productos sellados de este juego aún no están listos.');
+    sealedData[key] = await r.json();
+  }
+  const d = sealedData[key];
+  const types = Object.keys(SEALED_TYPES).filter(t => d.items.some(i => i.t === t));
+  let type = types.includes('box') ? 'box' : types.includes('etb') ? 'etb' : 'all', q = '', sort = 'new', limit = 60;
+  const val = i => i.e || i.u || null;
+  const draw = () => {
+    let list = d.items.filter(i => (type === 'all' || i.t === type) && (!q || normName(i.n + ' ' + (d.sets[i.g]?.n || '')).includes(q)));
+    list.sort(sort === 'hi' ? (a, b) => (val(b) ?? -1) - (val(a) ?? -1)
+      : sort === 'lo' ? (a, b) => (val(a) ?? 1e9) - (val(b) ?? 1e9)
+      : (a, b) => String(d.sets[b.g]?.d || '').localeCompare(String(d.sets[a.g]?.d || '')));
+    out.innerHTML = `${backBtn()}
+      <div class="bar"><h2>📦 Productos sellados · ${esc(GAMES[key].label)}</h2>
+        <select id="ssort"><option value="new">Más nuevos primero</option><option value="hi">Más caros primero</option><option value="lo">Más baratos primero</option></select></div>
+      <div class="sfilters">
+        <button class="chip${type === 'all' ? ' on' : ''}" data-t="all">Todo</button>
+        ${types.map(t => `<button class="chip${type === t ? ' on' : ''}" data-t="${t}">${SEALED_TYPES[t]}</button>`).join('')}
+      </div>
+      <input class="sfind" id="sfind" placeholder="Buscar por expansión o nombre (ej. 151, Romance Dawn…)" value="${esc(q)}">
+      <p class="note">${list.length} productos · Precios del ${fecha(d.cmUpdated || d.updated)} (Cardmarket €, si no TCGplayer $)</p>
+      <div class="list">${list.slice(0, limit).map((i, k) => `<div class="item" data-k="${k}">
+        <img src="${tcgImg(i)}" loading="lazy" alt="">
+        <div>${esc(i.n)}</div><div class="note">${esc(d.sets[i.g]?.n || '')}</div>
+        <div class="p">${eur(i.e) || usd(i.u) || '—'}</div></div>`).join('')}</div>
+      ${list.length > limit ? '<button class="more" id="more">Ver más</button>' : ''}`;
+    wireBack();
+    out.querySelectorAll('.sfilters .chip').forEach(b => b.onclick = () => { type = b.dataset.t; limit = 60; draw(); });
+    $('ssort').value = sort; $('ssort').onchange = e => { sort = e.target.value; draw(); };
+    const f = $('sfind');
+    f.oninput = () => { clearTimeout(f._t); f._t = setTimeout(() => { q = normName(f.value.trim()); limit = 60; draw(); $('sfind').focus(); $('sfind').setSelectionRange(99, 99); }, 300); };
+    if ($('more')) $('more').onclick = () => { limit += 60; draw(); };
+    out.querySelectorAll('.item').forEach(el => el.onclick = () => {
+      remember(draw);
+      sealedView(key, list[el.dataset.k]);
+    });
+  };
+  draw();
+  toTop();
+}
+
+function sealedView(key, i){
+  const d = sealedData[key], g = GAMES[key];
+  current = null;
+  render({
+    img: tcgImg(i, true), name: i.n, rarity: SEALED_TYPES[i.t]?.replace(/^\S+\s/, ''),
+    meta: esc(d.sets[i.g]?.n || '') + (d.sets[i.g]?.d ? ' · salió el ' + fecha(d.sets[i.g].d) : ''),
+    mainLabel: i.e ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
+    mainValue: eur(i.e) || usd(i.u), value: null,
+    rows: [['#Cardmarket (Europa)'], ['Tendencia', eur(i.e)], ['Desde', eur(i.el)], ['Media 30 días', eur(i.e30)],
+           ['#TCGplayer (EE. UU.)'], ['Precio de mercado', usd(i.u)], ['Desde', usd(i.ul)]],
+    links: [['Cardmarket', i.cm ? `https://www.cardmarket.com/es/${g.cm}/Products?idProduct=${i.cm}`
+              : `https://www.cardmarket.com/es/${g.cm}/Products/Search?searchString=${encodeURIComponent(i.n)}`],
+            ['TCGplayer', `https://www.tcgplayer.com/product/${i.id}`]],
+    updated: (i.e ? 'Cardmarket del ' : 'TCGplayer del ') + fecha(d.cmUpdated || d.updated),
+    sealed: true,
+  });
 }
 
 // =====================================================================
