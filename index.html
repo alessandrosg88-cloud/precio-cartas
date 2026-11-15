@@ -18,9 +18,18 @@
   .wrap{max-width:900px;margin:0 auto;padding:28px 16px 60px}
   h1{font-size:30px;margin:0 0 4px;text-align:center}
   .sub{color:var(--muted);text-align:center;margin:0 0 20px}
-  .tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
-  .tab{border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px;border-radius:999px;font-size:15px;cursor:pointer}
-  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .picker-game{position:relative;display:flex;justify-content:center;margin-bottom:16px}
+  .gsel{display:flex;align-items:center;gap:10px;border:2px solid var(--accent);background:var(--card);color:var(--text);padding:10px 18px;border-radius:14px;font-size:18px;font-weight:700;cursor:pointer;min-width:260px;justify-content:space-between}
+  .gsel small{display:block;font-size:12px;color:var(--muted);font-weight:600;text-align:left}
+  .gsel .ico{font-size:24px}
+  .gsel .car{font-size:14px;color:var(--accent);transition:transform .15s}
+  .gsel[aria-expanded="true"] .car{transform:rotate(180deg)}
+  .gmenu{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);z-index:5;width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:8px;display:none;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px}
+  .gmenu.open{display:grid}
+  .tab{display:flex;align-items:center;gap:8px;border:0;background:none;color:var(--text);padding:10px 12px;border-radius:10px;font-size:15px;cursor:pointer;text-align:left}
+  .tab:hover{background:var(--accent-soft)}
+  .tab.on{background:var(--accent);color:#fff;font-weight:700}
+  .tab .ico{font-size:20px}
   form{display:flex;gap:8px}
   input{flex:1;min-width:0;font-size:18px;padding:14px 16px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--text)}
   input:focus{outline:none;border-color:var(--accent)}
@@ -116,7 +125,14 @@
   <h1>🔎 Precio Cartas</h1>
   <p class="sub">Escribe o escanea el código de tu carta y mira cuánto vale.</p>
 
-  <div class="tabs" id="tabs"></div>
+  <div class="picker-game">
+    <button class="gsel" id="gsel" aria-haspopup="listbox" aria-expanded="false">
+      <span class="ico" id="gselIco"></span>
+      <span style="flex:1"><small>Juego</small><span id="gselName"></span></span>
+      <span class="car">▼</span>
+    </button>
+    <div class="gmenu" id="tabs" role="listbox"></div>
+  </div>
 
   <form id="form">
     <input id="q" autocomplete="off" placeholder="Código o nombre de la carta">
@@ -198,13 +214,33 @@ const $ = id => document.getElementById(id);
 const out = $('out');
 let backStack = []; // pantallas anteriores para el botón "Volver"
 
+// ---- Selector de juego: un solo botón que abre la lista ----
+const ICONS = { pokemon:'⚡', yugioh:'👁️', magic:'🔮', onepiece:'🏴‍☠️', dragonball:'🐉', digimon:'🦖', lorcana:'✨',
+  gundam:'🤖', riftbound:'⚔️', weiss:'🌸', wow:'🛡️', duelmasters:'🔥' };
+try { const saved = localStorage.getItem('juego'); if (saved && GAMES[saved]) game = saved; } catch (e) {}
 $('tabs').innerHTML = Object.entries(GAMES).map(([k, g]) =>
-  `<button class="tab${k === game ? ' on' : ''}" data-game="${k}">${g.label}</button>`).join('');
+  `<button class="tab" role="option" data-game="${k}"><span class="ico">${ICONS[k]}</span>${g.label}</button>`).join('');
+function showGame(){
+  $('gselIco').textContent = ICONS[game];
+  $('gselName').textContent = GAMES[game].label;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.game === game));
+}
+function toggleMenu(open){
+  $('tabs').classList.toggle('open', open);
+  $('gsel').setAttribute('aria-expanded', open);
+}
+$('gsel').onclick = e => { e.stopPropagation(); toggleMenu(!$('tabs').classList.contains('open')); };
+document.addEventListener('click', e => { if (!e.target.closest('.picker-game')) toggleMenu(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleMenu(false); });
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
-  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
-  t.classList.add('on'); game = t.dataset.game; out.innerHTML = ''; backStack = []; $('q').value = ''; showHelp(); $('q').focus();
+  toggleMenu(false);
+  if (game === t.dataset.game) return;
+  game = t.dataset.game;
+  try { localStorage.setItem('juego', game); } catch (e) {}
+  showGame(); out.innerHTML = ''; backStack = []; $('q').value = ''; showHelp(); $('q').focus();
   if (GAMES[game].type === 'local') loadLocal(game).catch(() => {}); // precarga
 });
+showGame();
 
 function showHelp(){
   const g = GAMES[game];
