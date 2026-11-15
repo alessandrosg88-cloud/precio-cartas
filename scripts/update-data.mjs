@@ -100,9 +100,51 @@ function matchCardmarket(tcg, cm){
   const byGroup = {};
   for (const c of tcg.cards) (byGroup[c.g] ||= []).push(c);
 
+  // Cardmarket a veces pone el código en el nombre: "Roronoa Zoro (OP01-001)".
+  // Esos productos se emparejan por nombre + código en TODO el juego (sirve también para promos).
+  const cmCode = p => { const m = p.name.match(/\(([A-Z0-9]+-[A-Z0-9]+)\)/i); return m ? normCode(m[1]) : ''; };
+  const tcgCode = c => normCode(String(c.c).split(' ')[0]);
+  const globalByCode = {};
+  for (const p of cm.products) { const k = cmCode(p); if (k) (globalByCode[norm(p.name) + '|' + k] ||= []).push(p); }
+
+  let matched = 0, rejected = 0;
+  // Empareja una lista de cartas TCGplayer con una lista de productos Cardmarket de la misma carta
+  const pair = (list, cmList) => {
+    const price = p => cmPrice(cm.prices[p.idProduct]) ?? Infinity;
+    const a = [...list].sort((x, y) => (x.u ?? Infinity) - (y.u ?? Infinity));
+    const b = [...cmList].sort((x, y) => price(x) - price(y));
+    const sameCount = a.length === b.length;
+    const used = new Set();
+    a.forEach((c, i) => {
+      let p;
+      if (sameCount) p = b[i];                                  // mismo nº de versiones: por orden de precio
+      else {                                                    // si no: el de precio más parecido
+        const target = Math.log((c.u || 0.1) * 0.92);
+        p = b.filter(x => !used.has(x)).sort((x, y) =>
+          Math.abs(Math.log(price(x) || 0.1) - target) - Math.abs(Math.log(price(y) || 0.1) - target))[0] || b[b.length - 1];
+      }
+      used.add(p);
+      const pg = cm.prices[p.idProduct];
+      if (!pg) return;
+      const e = cmPrice(pg);
+      // Comprobación: si el precio en € no se parece nada al de $, el emparejamiento es dudoso -> no lo usamos
+      if (e && c.u && Math.max(e, c.u) > 3 && (e / c.u > 3 || e / c.u < 0.33)) { rejected++; return; }
+      c.cm = p.idProduct;
+      c.e = r2(e); c.el = r2(pg.low || pg['low-foil']); c.e30 = r2(pg.avg30 || pg['avg30-foil']);
+      c.ef = r2(pg['trend-foil'] || pg['trend-holo']);
+      if (a.length > 1 || b.length > 1) c.ea = 1;              // hay varias versiones: avisar
+      matched++;
+    });
+  };
+
+  // 1) Por nombre + código en todo el juego
+  const tcgByCode = {};
+  for (const c of tcg.cards) { const k = norm(c.n) + '|' + tcgCode(c); if (globalByCode[k]) (tcgByCode[k] ||= []).push(c); }
+  for (const [k, list] of Object.entries(tcgByCode)) pair(list, globalByCode[k]);
+
+  // 2) El resto, por nombre dentro de la expansión equivalente (solo productos sin código en el nombre)
   const expNames = Object.fromEntries(Object.entries(byExp).map(([e, ps]) => [e, new Set(ps.map(p => norm(p.name)))]));
-  let matched = 0;
-  for (const [g, cards] of Object.entries(byGroup)) {
+  for (const cards of Object.values(byGroup)) {
     const names = new Set(cards.map(c => norm(c.n)));
     let best = null, bestScore = 0;
     for (const [e, set] of Object.entries(expNames)) {
@@ -111,37 +153,13 @@ function matchCardmarket(tcg, cm){
       if (score > bestScore) { bestScore = score; best = e; }
     }
     if (!best || bestScore < 0.5) continue;
-    // Cardmarket a veces pone el código en el nombre: "Roronoa Zoro (OP01-001)".
-    // Si lo tiene, emparejamos por nombre + código, que es mucho más exacto.
-    const cmCode = p => { const m = p.name.match(/\(([A-Z0-9]+-[A-Z0-9]+)\)/i); return m ? normCode(m[1]) : ''; };
     const cmByName = {};
-    for (const p of byExp[best]) {
-      (cmByName[norm(p.name)] ||= []).push(p);
-      const k = cmCode(p); if (k) (cmByName[norm(p.name) + '|' + k] ||= []).push(p);
-    }
+    for (const p of byExp[best]) if (!cmCode(p)) (cmByName[norm(p.name)] ||= []).push(p);
     const tcgByName = {};
-    for (const c of cards) {
-      const k = norm(c.n) + '|' + normCode(c.c);
-      (tcgByName[cmByName[k] ? k : norm(c.n)] ||= []).push(c);
-    }
-    for (const [n, list] of Object.entries(tcgByName)) {
-      const cmList = cmByName[n]; if (!cmList) continue;
-      const price = p => cmPrice(cm.prices[p.idProduct]) ?? Infinity;
-      const a = [...list].sort((x, y) => (x.u ?? Infinity) - (y.u ?? Infinity));
-      const b = [...cmList].sort((x, y) => price(x) - price(y));
-      const approx = a.length > 1 || b.length > 1;
-      a.forEach((c, i) => {
-        const p = b[Math.min(i, b.length - 1)], pg = cm.prices[p.idProduct];
-        if (!pg) return;
-        c.cm = p.idProduct;
-        c.e = r2(cmPrice(pg)); c.el = r2(pg.low || pg['low-foil']); c.e30 = r2(pg.avg30 || pg['avg30-foil']);
-        c.ef = r2(pg['trend-foil'] || pg['trend-holo']);
-        if (approx && a.length !== b.length) c.ea = 1; // emparejamiento aproximado
-        matched++;
-      });
-    }
+    for (const c of cards) if (!c.cm && !tcgByCode[norm(c.n) + '|' + tcgCode(c)] && cmByName[norm(c.n)]) (tcgByName[norm(c.n)] ||= []).push(c);
+    for (const [n, list] of Object.entries(tcgByName)) pair(list, cmByName[n]);
   }
-  return matched;
+  return `${matched} (descartadas por precio dudoso: ${rejected})`;
 }
 
 await mkdir('data', { recursive: true });
