@@ -135,7 +135,7 @@ async function howtoMagic(c){
   ];
   const k = kinds.filter(([re]) => re.test(tl)).map(x => x[1]);
   out.push(P(`<b>${esc(tl)}</b>`), ...k.map(P));
-  if (c.mana_cost) out.push(P(`💧 <b>Coste</b>: ${esc(c.mana_cost)} → paga ${esc(explainMana(c.mana_cost))} de maná.`));
+  if (c.mana_cost) out.push(P(`💧 <b>Coste</b>: ` + c.mana_cost.split(' // ').map(m => `${esc(m)} → paga ${esc(explainMana(m) || '0')}`).join(' &nbsp;|&nbsp; ') + ' de maná.'));
   const kw = (c.keywords || []).map(k => KEYWORDS[k] ? `<b>${k}</b> — ${KEYWORDS[k]}` : null).filter(Boolean);
   if (kw.length) out.push('<div class="lbl2">Palabras clave</div>' + LI(kw));
   // Texto en español si existe
@@ -209,7 +209,8 @@ async function howtoLocal(key, c){
   const fileKey = key + '/' + c.g;
   if (!textCache[fileKey]) textCache[fileKey] = fetch(`data/text/${key}/${c.g}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}));
   const t = (await textCache[fileKey])[c.id] || {};
-  const clean = s => String(s).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'").trim();
+  const clean = s => String(s).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'")
+    .split('\n').map(l => l.trim()).filter(l => !/^disclaimer/i.test(l)).join('\n').replace(/\n{3,}/g, '\n\n').trim();
   const entries = Object.entries(t).map(([k, v]) => [k, clean(v)]).filter(([, v]) => v);
   const isText = k => /description|text|effect|ability/i.test(k);
   const typeVal = (entries.find(([k]) => /card ?type|^type|category|class/i.test(k)) || [])[1] || c.n;
@@ -226,7 +227,7 @@ async function howtoLocal(key, c){
 // Página con la guía de un juego
 function showGuide(key){
   const g = GUIAS[key]; if (!g) return;
-  out.innerHTML = `${backBtn()}<div class="guide">
+  out.innerHTML = `${backBtn()}<div class="gpage">
     <h2>📖 Cómo se juega a ${esc(GAMES[key].label)}</h2>
     ${g.map(([ico, t, txt]) => `<div class="gstep"><div class="gico">${ico}</div><div><h3>${t}</h3><p>${txt}</p></div></div>`).join('')}
     <p class="note">Es un resumen para empezar. Cada carta puede cambiar las reglas: lo que dice la carta manda.</p>
