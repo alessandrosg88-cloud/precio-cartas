@@ -239,4 +239,5 @@ TRANS.de = {
 361: "TCGplayer vom {0}", 362: "ab",
 363: "Dieser Druck", 364: "Richtpreis dieses Drucks", 365: "TCGplayer verkauft diesen Druck nicht; Daten von YGOPRODeck, evtl. veraltet.", 366: "TCGplayer hat derzeit keinen Preis für diesen Druck.",
 367: "Karte nicht gefunden. Versuche den Code oder den Namen auf Englisch, Deutsch, Französisch, Italienisch, Portugiesisch oder Spanisch.", 368: "Deine Karte", 369: "TCGplayer verkauft nur englische Karten: Der Preis gilt für {0}. Für deine Sprache schau bei Cardmarket.", 370: "Name in anderen Sprachen", 371: "Portugiesisch",
+372: "Dieser Druck (Cardmarket)", 373: "Trend", 374: "30-Tage-Schnitt", 375: "Cardmarket-Preis dieses Drucks", 376: "Cardmarket trennt die Versionen dieser Karte in diesem Set nicht eindeutig: ungefährer Preis.",
 };

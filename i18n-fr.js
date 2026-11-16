@@ -239,4 +239,5 @@ TRANS.fr = {
 361: "TCGplayer du {0}", 362: "dès",
 363: "Cette impression", 364: "Prix indicatif de cette impression", 365: "TCGplayer ne vend pas cette impression ; donnée YGOPRODeck, peut-être obsolète.", 366: "TCGplayer n’a pas de prix pour cette impression en ce moment.",
 367: "Carte introuvable. Essaie le code ou son nom en anglais, allemand, français, italien, portugais ou espagnol.", 368: "Ta carte", 369: "TCGplayer ne vend que des cartes en anglais : le prix est celui de {0}. Pour ta langue, regarde Cardmarket.", 370: "Nom dans d’autres langues", 371: "portugais",
+372: "Cette impression (Cardmarket)", 373: "Tendance", 374: "moyenne 30 jours", 375: "Prix Cardmarket de cette impression", 376: "Cardmarket ne sépare pas bien les versions de cette carte dans cette extension : prix approximatif.",
 };

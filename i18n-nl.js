@@ -239,4 +239,5 @@ TRANS.nl = {
 361: "TCGplayer van {0}", 362: "vanaf",
 363: "Deze druk", 364: "Richtprijs van deze druk", 365: "TCGplayer verkoopt deze druk niet; gegevens van YGOPRODeck, mogelijk verouderd.", 366: "TCGplayer heeft nu geen prijs voor deze druk.",
 367: "Kaart niet gevonden. Probeer de code of de naam in het Engels, Duits, Frans, Italiaans, Portugees of Spaans.", 368: "Jouw kaart", 369: "TCGplayer verkoopt alleen Engelse kaarten: de prijs is die van {0}. Kijk voor jouw taal op Cardmarket.", 370: "Naam in andere talen", 371: "Portugees",
+372: "Deze druk (Cardmarket)", 373: "Trend", 374: "gemiddelde 30 dagen", 375: "Cardmarket-prijs van deze druk", 376: "Cardmarket scheidt de versies van deze kaart in deze set niet goed: geschatte prijs.",
 };

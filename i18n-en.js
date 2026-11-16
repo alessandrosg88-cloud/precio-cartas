@@ -239,4 +239,5 @@ TRANS.en = {
 361: "TCGplayer on {0}", 362: "from",
 363: "This printing", 364: "Approximate price of this printing", 365: "TCGplayer does not sell this printing; YGOPRODeck data, may be out of date.", 366: "TCGplayer has no price for this printing right now.",
 367: "Card not found. Try the code or its name in English, German, French, Italian, Portuguese or Spanish.", 368: "Your card", 369: "TCGplayer only sells English cards: the price is for {0}. For your language, check Cardmarket.", 370: "Name in other languages", 371: "Portuguese",
+372: "This printing (Cardmarket)", 373: "Trend", 374: "30-day average", 375: "Cardmarket price of this printing", 376: "Cardmarket does not clearly separate the versions of this card in this set: approximate price.",
 };

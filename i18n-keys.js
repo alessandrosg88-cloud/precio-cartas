@@ -370,5 +370,10 @@ const ES_KEYS = [
 "Tu carta",
 "TCGplayer solo vende cartas en inglés: el precio es el de {0}. Para tu idioma, mira Cardmarket.",
 "Nombre en otros idiomas",
-"portugués"
+"portugués",
+"Esta edición (Cardmarket)",
+"Tendencia",
+"media 30 días",
+"Precio en Cardmarket de esta edición",
+"Cardmarket no separa bien las versiones de esta carta en esta expansión: precio aproximado."
 ];

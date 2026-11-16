@@ -29,7 +29,7 @@ function loadLang(l){
   if (l === 'es' || TRANS[l]) return Promise.resolve();
   return langLoading[l] ||= new Promise(ok => {
     const s = document.createElement('script');
-    s.src = `i18n-${l}.js?v=11`; s.onload = ok; s.onerror = ok;
+    s.src = `i18n-${l}.js?v=12`; s.onload = ok; s.onerror = ok;
     document.head.appendChild(s);
   });
 }
