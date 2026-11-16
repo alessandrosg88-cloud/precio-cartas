@@ -236,4 +236,5 @@ TRANS.de = {
 352: 'Wischen, um alle Versionen zu sehen ({0})',
 353: "⚠️ Kein Foto dieses offiziellen Drucks: Das Bild dient nur als Referenz (YGOPRODeck-Replik, „Not For Use in Sanctioned Tournaments“).", 354: "Foto (Yugipedia)",
 355: "Unter diesem Code wurden mehrere Versionen gedruckt. Tippe auf deine:", 356: "1. Auflage", 357: "Unlimitiert", 358: "Limitierte Auflage", 359: "Neuauflage", 360: "25. Jubiläum",
+361: "TCGplayer vom {0}", 362: "ab",
 };

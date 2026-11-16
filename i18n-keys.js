@@ -359,5 +359,7 @@ const ES_KEYS = [
 "Edición ilimitada",
 "Edición limitada",
 "Reimpresión",
-"25 aniversario"
+"25 aniversario",
+"TCGplayer del {0}",
+"desde"
 ];

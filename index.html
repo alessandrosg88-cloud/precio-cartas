@@ -196,8 +196,8 @@
   <footer data-t="Precios: Cardmarket (guía de precios pública) · TCGplayer · tcgdex.net · ygoprodeck.com · scryfall.com · Torekakaku — orientativos."></footer>
 </div>
 
-<script src="i18n-keys.js?v=8"></script>
-<script src="i18n.js?v=8"></script>
+<script src="i18n-keys.js?v=9"></script>
+<script src="i18n.js?v=9"></script>
 <script src="guias.js?v=5"></script>
 <script src="como-se-usa.js?v=5"></script>
 <script>
@@ -472,6 +472,7 @@ function render(v){
   if (v.alts) out.querySelectorAll('.alt').forEach(b => b.onclick = () => {
     const a = v.alts[b.dataset.k];
     out.querySelector('.pic img').src = a.url;
+    if (a.pv) out.querySelector('.big .val').innerHTML = a.pv;
     out.querySelectorAll('.alt').forEach(x => x.classList.toggle('on', x === b));
     const l = [...out.querySelectorAll('.links a')].find(x => x.href.includes('yugipedia.com/wiki/File:'));
     if (l) l.href = `https://yugipedia.com/wiki/File:${encodeURIComponent(a.file)}`;
@@ -790,31 +791,69 @@ async function searchYugioh(q){
     price: eur(c.card_prices?.[0]?.cardmarket_price), open: () => openYugioh(c) })));
 }
 
+// ---- Precio de TCGplayer de cada impresión (lo descarga cada día la GitHub Action en data/ygo/) ----
+// El set_price de YGOPRODeck mezcla impresiones que comparten código (p. ej. LOB-EN001 original y 25 aniversario)
+// y a menudo está desactualizado, así que usamos el precio de mercado de TCGplayer de cada producto.
+const ygoNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/\(.*?\)|\[.*?\]/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+const ygoShard = n => ygoNorm(n).replace(/ /g, '').slice(0, 2).padEnd(2, '_');
+const printCache = {};
+async function ygoPrints(name){
+  const k = ygoShard(name);
+  const f = await (printCache[k] ||= fetch(`data/ygo/${k}.json`).then(r => r.ok ? r.json() : null).catch(() => null));
+  return f ? { updated: f.updated, list: f.d[ygoNorm(name)] || [] } : null;
+}
+// impresiones de TCGplayer con ese código y rareza
+function printsFor(pr, s){
+  if (!pr || !s) return [];
+  const same = pr.list.filter(e => normCode(e.c) === normCode(s.set_code));
+  const r = same.filter(e => e.r.toLowerCase() === String(s.set_rarity).toLowerCase());
+  return r.length ? r : (same.length && new Set(same.map(e => e.r)).size === 1 ? same : []);
+}
+// precio de mercado más bajo entre sus ediciones (1st Edition, Unlimited…)
+const printPrice = e => { const v = Object.values(e?.p || {}).map(x => x[0]).filter(Boolean); return v.length ? Math.min(...v) : null; };
+const is25 = e => /25th Anniversary/i.test(e?.g || '');
+const ED_TCG = { '1st Edition': '1ª edición', 'Unlimited': 'Edición ilimitada', 'Limited': 'Edición limitada' };
+
 async function openYugioh(c, code, rarity){
   const sets = c.card_sets || [];
-  // escaneos reales de todas las impresiones de la carta (una sola consulta)
-  const scans = await withTimeout(ygpScans(c.name), 4000) || [];
+  // escaneos reales de todas las impresiones de la carta (una sola consulta) + precios por impresión
+  const [scans0, pr] = await Promise.all([withTimeout(ygpScans(c.name), 4000), withTimeout(ygoPrints(c.name), 4000)]);
+  const scans = scans0 || [];
+  const priceOf = s => { const ps = printsFor(pr, s); return ps.length ? Math.min(...ps.map(printPrice).filter(Boolean)) || null : null; };
   const real = s => s && pickScan(scans, s.set_code, s.set_rarity);
   // ordena: primero la edición buscada, luego por precio
   const items = sets.length ? [...sets] : [null];
   let idx = code ? items.findIndex(s => s && s.set_code.toUpperCase() === code && (!rarity || s.set_rarity === rarity)) : -1;
   if (idx < 0 && code) idx = items.findIndex(s => s && s.set_code.toUpperCase() === code);
-  return showVersions(items, idx < 0 ? 0 : idx, async s => yugiohView(c, s, real(s) || (!s && pickScan(scans, null, null)), s ? scanGroup(scans, s.set_code, s.set_rarity) : []),
+  return showVersions(items, idx < 0 ? 0 : idx, async s => yugiohView(c, s, real(s) || (!s && pickScan(scans, null, null)), s ? scanGroup(scans, s.set_code, s.set_rarity) : [], pr),
     s => { const x = real(s); const i = x ? ygpThumb(x.url) : c.card_images?.[0]?.image_url_small;
-      return s ? { r: s.set_rarity, t: s.set_code, p: usd(s.set_price), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
+      return s ? { r: s.set_rarity, t: s.set_code, p: usd(pr ? priceOf(s) : s.set_price), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
 }
 
-function yugiohView(c, set, scan, group = []){
+function yugiohView(c, set, scan, group = [], pr = null){
   const p = c.card_prices?.[0] || {};
   const rows = [];
-  if (set) rows.push(['#Esta edición (TCGplayer)'], [`${set.set_code} (${set.set_rarity})`, usd(set.set_price)]);
+  const ps = printsFor(pr, set);
+  // con varias impresiones del mismo código, la foto elegida decide cuál es "la tuya"
+  const alts = group.length > 1 ? group.map(x => ({ url: x.url, label: scanLabel(x), file: x.file, is25: x.extra.includes('25thAnniversaryEdition') })) : null;
+  const pick = a => ps.length > 1 && a ? (ps.find(e => is25(e) === a.is25) || null) : ps[0] || null;
+  if (alts) alts.forEach(a => { const e = pick(a); a.pv = e && printPrice(e) ? usd(printPrice(e)) : null; a.v = e ? printPrice(e) : null; });
+  const chosen = ps.length > 1 ? pick(alts?.[0]) : ps[0];
+  if (set && ps.length) {
+    rows.push(['#Esta edición (TCGplayer)']);
+    for (const e of ps) for (const [ed, [m, low]] of Object.entries(e.p))
+      rows.push([[set.set_code, ps.length > 1 ? (is25(e) ? T('25 aniversario') : e.g) : '', T(ED_TCG[ed] || ed)].filter(Boolean).join(' · '),
+        usd(m || low) + (low && m ? ` <small>(${T('desde')} ${usd(low)})</small>` : '')]);
+  } else if (set && !pr) rows.push(['#Esta edición (TCGplayer)'], [`${set.set_code} (${set.set_rarity})`, usd(set.set_price)]);
   rows.push(['#Precio general de la carta'],
     ['Cardmarket (la edición más barata)', eur(p.cardmarket_price)], ['TCGplayer', usd(p.tcgplayer_price)],
     ['eBay', usd(p.ebay_price)], ['Amazon', usd(p.amazon_price)], ['CoolStuffInc', usd(p.coolstuffinc_price)]);
-  const sp = set && Number(set.set_price);
+  const sp = pr ? (chosen ? printPrice(chosen) : null) : set && Number(set.set_price);
   return {
     img: scan?.url || c.card_images?.[0]?.image_url, replica: !scan, name: c.name, rarity: set?.set_rarity,
-    alts: group.length > 1 ? group.map(x => ({ url: x.url, label: scanLabel(x), file: x.file })) : null,
+    alts,
+    updated: pr && ps.length ? T('TCGplayer del {0}', fecha(pr.updated)) : '',
     versionLabel: set ? `${set.set_code} · ${set.set_rarity}` : '',
     meta: set ? `${esc(set.set_name)} · ${esc(set.set_code)}` : esc(c.type),
     mainLabel: sp ? 'Precio de esta edición exacta' : 'Precio en Cardmarket (desde)',
@@ -842,11 +881,16 @@ async function openYugiohSet(name){
   const r = await getJSON(`${YGO}/cardinfo.php?cardset=${encodeURIComponent(name)}`);
   const cards = r?.data || [];
   if (!cards.length) return error(T('No se pudo cargar la expansión.'));
+  // precios por impresión (un archivo pequeño por cada 2 letras del nombre)
+  const prs = {};
+  await withTimeout(Promise.all([...new Set(cards.map(c => c.name))].map(async n => { prs[n] = await ygoPrints(n); })), 6000);
+  const priceOf = (c, s) => { const pr = prs[c.name]; if (!pr) return Number(s.set_price) || null;
+    const v = printsFor(pr, s).map(printPrice).filter(Boolean); return v.length ? Math.min(...v) : null; };
   const items = [];
   for (const c of cards) for (const s of c.card_sets || []) if (s.set_name === name) items.push({
     img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${s.set_rarity}`,
     real: () => ygoRealImg(c, s.set_code, s.set_rarity, true),
-    price: usd(s.set_price), v: Number(s.set_price) || null, code: s.set_code,
+    price: usd(priceOf(c, s)), v: priceOf(c, s), code: s.set_code,
     open: () => openYugioh(c, s.set_code.toUpperCase(), s.set_rarity) });
   items.sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true }));
   renderGrid(`${esc(name)} · ${T('{0} cartas', items.length)}`, items, { sort: true });
