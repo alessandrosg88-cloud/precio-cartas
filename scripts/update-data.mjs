@@ -72,7 +72,7 @@ async function loadTcg(categoryId, sealedOnly, wantPrints){
         // Precio de TCGplayer de cada impresión, separado por edición (1st Edition, Unlimited, Limited…)
         const ed = {};
         for (const x of byId[p.productId] || []) if (x.marketPrice || x.lowPrice || x.midPrice) ed[x.subTypeName || 'Normal'] = [r2(x.marketPrice ?? x.midPrice), r2(x.lowPrice)];
-        prints.push({ n: p.name, c: ext.Number, r: ext.Rarity || '', g: g.name, id: p.productId, p: ed });
+        prints.push({ n: p.name, c: ext.Number, r: ext.Rarity || '', g: g.name, gid: g.groupId, id: p.productId, p: ed });
       }
       if (sealedOnly) continue;
       // Texto y datos de la carta (efecto, coste, poder…) para "Cómo se usa esta carta"
@@ -199,6 +199,60 @@ function matchCardmarket(tcg, cm){
   return `${matched} (descartadas por precio dudoso: ${rejected})`;
 }
 
+// Yu-Gi-Oh!: une cada impresión de TCGplayer con su producto de Cardmarket (precio en €).
+// 1) cada expansión de TCGplayer con la de Cardmarket que más nombres de carta comparte
+// 2) dentro de la expansión, por nombre; si hay varias versiones, por la rareza que Cardmarket pone
+//    en el nombre ("Dark Magician (V.2 - Quarter Century Secret Rare)") y, si aún hay varias, por orden de precio
+function matchPrintsCardmarket(prints, cm){
+  const byExp = {};
+  for (const p of cm.products) (byExp[p.idExpansion] ||= []).push(p);
+  const expNames = Object.fromEntries(Object.entries(byExp).map(([e, ps]) => [e, new Set(ps.map(p => norm(p.name)))]));
+  const byGroup = {};
+  for (const x of prints) (byGroup[x.gid] ||= []).push(x);
+  const rarOf = p => (p.name.match(/\(V\.\d+\s*-\s*([^)]+)\)/i) || [])[1]?.trim().toLowerCase() || '';
+  const price = p => cmPrice(cm.prices[p.idProduct]);
+  let n = 0, rejected = 0;
+  console.log('   Ejemplos CM: ' + cm.products.filter(p => /^Dark Magician \(/.test(p.name)).slice(0, 8).map(p => p.name + ' [' + p.idExpansion + ']').join(' | '));
+  for (const list of Object.values(byGroup)) {
+    const names = new Set(list.map(x => norm(x.n)));
+    let best = null, bestScore = 0;
+    for (const [e, set] of Object.entries(expNames)) {
+      let inter = 0; for (const k of names) if (set.has(k)) inter++;
+      const score = inter / Math.max(names.size, set.size);
+      if (score > bestScore) { bestScore = score; best = e; }
+    }
+    if (!best || bestScore < 0.4) continue;
+    const cmByName = {};
+    for (const p of byExp[best]) (cmByName[norm(p.name)] ||= []).push(p);
+    const tcgByName = {};
+    for (const x of list) (tcgByName[norm(x.n)] ||= []).push(x);
+    for (const [k, xs] of Object.entries(tcgByName)) {
+      const ps = cmByName[k]; if (!ps) continue;
+      // agrupa por rareza (si Cardmarket la indica) y empareja por orden de precio dentro de cada grupo
+      const groups = {};
+      for (const x of xs) {
+        const withR = ps.filter(p => rarOf(p) === x.r.toLowerCase());
+        const key = withR.length ? x.r.toLowerCase() : '*';
+        (groups[key] ||= { xs: [], ps: withR.length ? withR : ps }).xs.push(x);
+      }
+      for (const { xs: gx, ps: gp } of Object.values(groups)) {
+        const a = [...gx].sort((u, v) => (Math.min(...Object.values(u.p).map(q => q[0] || Infinity)) - Math.min(...Object.values(v.p).map(q => q[0] || Infinity))));
+        const b = [...gp].filter(p => price(p)).sort((u, v) => price(u) - price(v));
+        if (!b.length) continue;
+        // si TCGplayer tiene más versiones que Cardmarket (o al revés) solo emparejamos cuando cuadran
+        if (a.length !== b.length && !(a.length === 1 && gp.length === 1)) continue;
+        a.forEach((x, i) => {
+          const pr = b[i], pg = cm.prices[pr.idProduct], e = price(pr);
+          const u = Math.min(...Object.values(x.p).map(q => q[0] || Infinity));
+          if (isFinite(u) && Math.max(e, u) > 3 && (e / u > 3 || e / u < 0.33)) { rejected++; return; }
+          x.cm = pr.idProduct; x.e = r2(e); x.el = r2(pg.low); x.e30 = r2(pg.avg30); n++;
+        });
+      }
+    }
+  }
+  return `${n} (descartadas por precio dudoso: ${rejected})`;
+}
+
 // Une cada producto sellado de TCGplayer con el de Cardmarket.
 // Los nombres no son iguales ("Booster Box" vs "Booster Display"), así que comparamos las palabras
 // importantes (la expansión) dentro del mismo tipo de producto y nos quedamos con el más parecido.
@@ -289,7 +343,8 @@ async function writePrints(key, prints){
   // variante de la carta según el nombre del producto: "Dark Magician (Arkana) (Quarter Century Secret Rare)" -> "Arkana"
   const variant = n => [...String(n).matchAll(/\(([^()]+)\)/g)].map(m => m[1]).filter(t => !/rare|edition|parallel/i.test(t)).join(' · ');
   for (const x of prints) { const k = norm(x.n), v = variant(x.n);
-    ((shards[shardOf(x.n)] ||= {})[k] ||= []).push({ c: x.c, r: x.r, g: x.g, id: x.id, p: x.p, ...(v ? { v } : {}) }); }
+    ((shards[shardOf(x.n)] ||= {})[k] ||= []).push({ c: x.c, r: x.r, g: x.g, id: x.id, p: x.p, ...(v ? { v } : {}),
+      ...(x.cm ? { cm: x.cm, e: x.e, el: x.el, e30: x.e30 } : {}) }); }
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });
   const updated = new Date().toISOString();
@@ -316,6 +371,7 @@ for (const [key, G] of Object.entries(GAMES)) {
       const cm = await loadCardmarket(G.cm);
       cmUpdated = cm.updated;
       if (!G.sealedOnly) console.log(`   Emparejadas con Cardmarket: ${matchCardmarket(all, cm)}`);
+      if (G.prints) console.log(`   Impresiones con precio Cardmarket: ${matchPrintsCardmarket(all.prints, cm)}`);
       console.log(`   Sellados: ${all.sealed.length}, con precio Cardmarket: ${matchSealed(all.sealed, cm, all.sealedSets)}`);
     } catch (e) { console.log('   ⚠️ Cardmarket no disponible:', e.message); }
     await writeFile(`data/sealed/${key}.json`, JSON.stringify({ updated: new Date().toISOString(), cmUpdated, sets: all.sealedSets, items: all.sealed }));
