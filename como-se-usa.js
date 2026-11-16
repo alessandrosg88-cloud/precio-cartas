@@ -4,88 +4,91 @@
 // =====================================================================
 const P = t => `<p>${t}</p>`;
 const LI = arr => `<ul>${arr.filter(Boolean).map(x => `<li>${x}</li>`).join('')}</ul>`;
-const cardText = (t, lang) => t ? `<div class="ctext"><div class="lbl2">Texto de la carta${lang ? ' (' + lang + ')' : ''}</div>${esc(t).replace(/\n/g, '<br>')}</div>` : '';
+const cardText = (t, lang) => t ? `<div class="ctext"><div class="lbl2">${T('Texto de la carta')}${lang ? ' (' + T(lang) + ')' : ''}</div>${esc(t).replace(/\n/g, '<br>')}</div>` : '';
 
 // ---------------------------- YU-GI-OH! ----------------------------
 function howtoYugioh(c){
   const t = c.type || '', d = c.desc || '', out = [];
   if (/Spell/i.test(t)) {
     const kinds = {
-      'Normal': 'Se juega en <b>tu turno</b> (Fase Principal). Hace su efecto y se va al Cementerio.',
-      'Quick-Play': '<b>Mágica Rápida</b>: desde la mano solo en tu turno, pero si la colocas boca abajo puedes activarla también en el <b>turno del rival</b> (no en el mismo turno en que la colocas).',
-      'Continuous': '<b>Mágica Continua</b>: se queda en el campo y su efecto dura mientras siga boca arriba.',
-      'Equip': '<b>Mágica de Equipo</b>: se equipa a un monstruo y le da su efecto. Si el monstruo se va, ella también.',
-      'Field': '<b>Mágica de Campo</b>: va en la Zona de Campo y afecta a todo el juego. Solo puede haber 1 por jugador.',
-      'Ritual': '<b>Mágica de Ritual</b>: sirve para <b>Invocar por Ritual</b> a un monstruo de Ritual sacrificando monstruos cuyos Niveles sumen lo que pide.',
+      'Normal': T('Se juega en <b>tu turno</b> (Fase Principal). Hace su efecto y se va al Cementerio.'),
+      'Quick-Play': T('<b>Mágica Rápida</b>: desde la mano solo en tu turno, pero si la colocas boca abajo puedes activarla también en el <b>turno del rival</b> (no en el mismo turno en que la colocas).'),
+      'Continuous': T('<b>Mágica Continua</b>: se queda en el campo y su efecto dura mientras siga boca arriba.'),
+      'Equip': T('<b>Mágica de Equipo</b>: se equipa a un monstruo y le da su efecto. Si el monstruo se va, ella también.'),
+      'Field': T('<b>Mágica de Campo</b>: va en la Zona de Campo y afecta a todo el juego. Solo puede haber 1 por jugador.'),
+      'Ritual': T('<b>Mágica de Ritual</b>: sirve para <b>Invocar por Ritual</b> a un monstruo de Ritual sacrificando monstruos cuyos Niveles sumen lo que pide.'),
     };
-    out.push(P(`🟩 <b>Carta Mágica</b>. ${kinds[c.race] || kinds.Normal}`));
+    out.push(P(`${T('🟩 <b>Carta Mágica</b>.')} ${kinds[c.race] || kinds.Normal}`));
   } else if (/Trap/i.test(t)) {
     const kinds = {
-      'Normal': 'Hace su efecto y se va al Cementerio.',
-      'Continuous': '<b>Trampa Continua</b>: se queda en el campo y su efecto dura.',
-      'Counter': '<b>Trampa de Contraefecto</b>: se usa para responder y <b>anular</b> otras cartas o efectos. Es la más rápida.',
+      'Normal': T('Hace su efecto y se va al Cementerio.'),
+      'Continuous': T('<b>Trampa Continua</b>: se queda en el campo y su efecto dura.'),
+      'Counter': T('<b>Trampa de Contraefecto</b>: se usa para responder y <b>anular</b> otras cartas o efectos. Es la más rápida.'),
     };
-    out.push(P(`🟪 <b>Carta de Trampa</b>. Primero la <b>colocas boca abajo</b>; puedes activarla a partir del <b>turno siguiente</b>, también en el turno del rival. ${kinds[c.race] || ''}`));
+    out.push(P(`${T('🟪 <b>Carta de Trampa</b>. Primero la <b>colocas boca abajo</b>; puedes activarla a partir del <b>turno siguiente</b>, también en el turno del rival.')} ${kinds[c.race] || ''}`));
   } else {
     const lv = c.level, stats = c.atk != null ? `ATK ${c.atk}${c.def != null ? ' / DEF ' + c.def : ''}` : '';
     let how;
-    if (/Link/i.test(t)) how = `🔵 <b>Monstruo de Enlace (Link-${c.linkval})</b>. Vive en el <b>Deck Extra</b>. Para invocarlo mandas al Cementerio los <b>materiales</b> que pide (los pone al principio del texto). Cada monstruo cuenta como 1 material (o como su número Link si es de Enlace). Solo está en Ataque y apunta con sus flechas a otras zonas.`;
-    else if (/XYZ/i.test(t)) how = `⬛ <b>Monstruo Xyz (Rango ${lv})</b>. Vive en el <b>Deck Extra</b>. Para invocarlo pones uno encima de otro los monstruos del <b>mismo Nivel</b> que pide (ej. "2 Level ${lv} monsters"). Esos materiales se quedan debajo y se gastan para usar sus efectos.`;
-    else if (/Synchro/i.test(t)) how = `⬜ <b>Monstruo de Sincronía (Nivel ${lv})</b>. Vive en el <b>Deck Extra</b>. Mandas al Cementerio <b>1 Cantante (Tuner)</b> + otros monstruos que no sean Cantantes, y sus Niveles tienen que sumar <b>exactamente ${lv}</b>.`;
-    else if (/Fusion/i.test(t)) how = `🟪 <b>Monstruo de Fusión (Nivel ${lv})</b>. Vive en el <b>Deck Extra</b>. Se invoca con una carta como <b>"Polymerization"</b>, mandando al Cementerio los monstruos que pide su texto (los materiales).`;
-    else if (/Ritual/i.test(t)) how = `🟦 <b>Monstruo de Ritual (Nivel ${lv})</b>. Necesitas su <b>Carta Mágica de Ritual</b> y sacrificar monstruos cuyos Niveles sumen <b>${lv} o más</b>.`;
+    if (/Link/i.test(t)) how = T('🔵 <b>Monstruo de Enlace (Link-{0})</b>. Vive en el <b>Deck Extra</b>. Para invocarlo mandas al Cementerio los <b>materiales</b> que pide (los pone al principio del texto). Cada monstruo cuenta como 1 material (o como su número Link si es de Enlace). Solo está en Ataque y apunta con sus flechas a otras zonas.', c.linkval);
+    else if (/XYZ/i.test(t)) how = T('⬛ <b>Monstruo Xyz (Rango {0})</b>. Vive en el <b>Deck Extra</b>. Para invocarlo pones uno encima de otro los monstruos del <b>mismo Nivel</b> que pide (ej. "2 Level {0} monsters"). Esos materiales se quedan debajo y se gastan para usar sus efectos.', lv);
+    else if (/Synchro/i.test(t)) how = T('⬜ <b>Monstruo de Sincronía (Nivel {0})</b>. Vive en el <b>Deck Extra</b>. Mandas al Cementerio <b>1 Cantante (Tuner)</b> + otros monstruos que no sean Cantantes, y sus Niveles tienen que sumar <b>exactamente {0}</b>.', lv);
+    else if (/Fusion/i.test(t)) how = T('🟪 <b>Monstruo de Fusión (Nivel {0})</b>. Vive en el <b>Deck Extra</b>. Se invoca con una carta como <b>"Polymerization"</b>, mandando al Cementerio los monstruos que pide su texto (los materiales).', lv);
+    else if (/Ritual/i.test(t)) how = T('🟦 <b>Monstruo de Ritual (Nivel {0})</b>. Necesitas su <b>Carta Mágica de Ritual</b> y sacrificar monstruos cuyos Niveles sumen <b>{0} o más</b>.', lv);
     else {
-      const trib = lv <= 4 ? '<b>Invocación Normal</b> directa, sin sacrificios (1 por turno).'
-        : lv <= 6 ? 'Para la Invocación Normal tienes que <b>sacrificar 1 monstruo</b> tuyo.'
-        : 'Para la Invocación Normal tienes que <b>sacrificar 2 monstruos</b> tuyos.';
-      how = `🟧 <b>Monstruo de Nivel ${lv}</b>. ${trib}`;
+      const trib = lv <= 4 ? T('<b>Invocación Normal</b> directa, sin sacrificios (1 por turno).')
+        : lv <= 6 ? T('Para la Invocación Normal tienes que <b>sacrificar 1 monstruo</b> tuyo.')
+        : T('Para la Invocación Normal tienes que <b>sacrificar 2 monstruos</b> tuyos.');
+      how = T('🟧 <b>Monstruo de Nivel {0}</b>.', lv) + ' ' + trib;
       if (/cannot be Normal Summoned|must (first )?be Special Summoned/i.test(d))
-        how = `🟧 <b>Monstruo de Nivel ${lv}</b> que <b>no se puede Invocar de forma Normal</b>: solo sale por <b>Invocación Especial</b>, como explica su texto.`;
+        how = T('🟧 <b>Monstruo de Nivel {0}</b> que <b>no se puede Invocar de forma Normal</b>: solo sale por <b>Invocación Especial</b>, como explica su texto.', lv);
     }
     out.push(P(how));
-    if (/Pendulum/i.test(t)) out.push(P(`🌗 También es <b>Péndulo</b> (Escala ${c.scale}): puedes ponerlo en tu Zona de Péndulo como si fuera una Mágica. Con 2 escalas puestas, invocas a la vez monstruos con Nivel entre las dos.`));
-    if (/Normal Monster/i.test(t)) out.push(P('Es un <b>monstruo Normal</b>: no tiene efecto, solo sus puntos de ataque y defensa.'));
-    else if (/Effect|Flip|Spirit|Toon|Union|Gemini|Tuner/i.test(t)) out.push(P('Tiene un <b>efecto</b>: lo explica su texto de abajo.' + (/FLIP:/i.test(d) ? ' Es de <b>Volteo</b>: su efecto se activa cuando se pone boca arriba.' : '') + (/Quick Effect/i.test(d) ? ' Tiene un <b>Efecto Rápido</b>: puede usarlo también en el turno del rival.' : '')));
-    if (/Tuner/i.test(t)) out.push(P('Es <b>Cantante (Tuner)</b>: sirve como material para las Invocaciones por Sincronía.'));
+    if (/Pendulum/i.test(t)) out.push(P(T('🌗 También es <b>Péndulo</b> (Escala {0}): puedes ponerlo en tu Zona de Péndulo como si fuera una Mágica. Con 2 escalas puestas, invocas a la vez monstruos con Nivel entre las dos.', c.scale)));
+    if (/Normal Monster/i.test(t)) out.push(P(T('Es un <b>monstruo Normal</b>: no tiene efecto, solo sus puntos de ataque y defensa.')));
+    else if (/Effect|Flip|Spirit|Toon|Union|Gemini|Tuner/i.test(t)) out.push(P(T('Tiene un <b>efecto</b>: lo explica su texto de abajo.') + (/FLIP:/i.test(d) ? ' ' + T('Es de <b>Volteo</b>: su efecto se activa cuando se pone boca arriba.') : '') + (/Quick Effect/i.test(d) ? ' ' + T('Tiene un <b>Efecto Rápido</b>: puede usarlo también en el turno del rival.') : '')));
+    if (/Tuner/i.test(t)) out.push(P(T('Es <b>Cantante (Tuner)</b>: sirve como material para las Invocaciones por Sincronía.')));
     if (stats) out.push(P(`⚔️ ${stats} · ${esc(c.attribute || '')} · ${esc(c.race || '')}`));
   }
-  if (c.pend_desc) out.push(cardText(c.pend_desc, 'efecto de Péndulo, inglés'), cardText(c.monster_desc, 'efecto de monstruo, inglés'));
-  else out.push(cardText(d, 'inglés'));
+  const tl = c._lang || 'inglés';
+  if (c.pend_desc) out.push(cardText(c.pend_desc, T('efecto de Péndulo') + ', ' + T(tl)), cardText(c.monster_desc, T('efecto de monstruo') + ', ' + T(tl)));
+  else out.push(cardText(d, tl));
   return out.join('');
 }
 
 // ---------------------------- POKÉMON ----------------------------
 async function howtoPokemon(id){
-  const c = await getJSON(`https://api.tcgdex.net/v2/es/cards/${id}`).catch(() => null)
-         || await getJSON(`https://api.tcgdex.net/v2/en/cards/${id}`);
-  if (!c) return P('No hay información de esta carta.');
+  const TL = { es: 'es', en: 'en', it: 'it', fr: 'fr', nl: 'nl', de: 'de', ja: 'ja', zh: 'zh-tw', ko: 'ko' }[LANG] || 'en';
+  let c = await getJSON(`https://api.tcgdex.net/v2/${TL}/cards/${id}`).catch(() => null);
+  let lang = LANG_NAME();
+  if (!c || !c.category) { c = await getJSON(`https://api.tcgdex.net/v2/en/cards/${id}`); lang = 'inglés'; }
+  if (!c) return P(T('No hay información de esta carta.'));
   const out = [];
-  if (/pok/i.test(c.category)) {
-    const basic = /b[aá]sic/i.test(c.stage || '');
+  if (/pok|ポケモン|宝可梦|寶可夢|포켓몬/i.test(c.category)) {
+    const basic = /b[aá]sic|base|たね|基础|基礎|기본|basis/i.test(c.stage || '');
     out.push(P(basic
-      ? `🟢 <b>Pokémon Básico</b>: lo puedes poner directamente en juego (como Activo o en la Banca).`
-      : `🔼 <b>${esc(c.stage || 'Evolución')}</b>: no se juega solo. Se pone <b>encima de ${esc(c.evolveFrom || 'su forma anterior')}</b> (que debe llevar al menos un turno en juego) para evolucionarlo. Conserva las Energías y el daño.`));
-    if (/\bex\b|\bV\b|VMAX|VSTAR|GX/.test(c.name)) out.push(P('⭐ Es un Pokémon especial (ex / V / GX…): más fuerte, pero si queda Fuera de Combate el rival coge <b>2 Premios</b> (3 si es VMAX).'));
-    out.push(P(`❤️ <b>${c.hp} PS</b> (puntos de salud) · Tipo: ${esc((c.types || []).join(', '))}`));
+      ? T('🟢 <b>Pokémon Básico</b>: lo puedes poner directamente en juego (como Activo o en la Banca).')
+      : T('🔼 <b>{0}</b>: no se juega solo. Se pone <b>encima de {1}</b> (que debe llevar al menos un turno en juego) para evolucionarlo. Conserva las Energías y el daño.', esc(c.stage || T('Evolución')), esc(c.evolveFrom || T('su forma anterior')))));
+    if (/\bex\b|\bV\b|VMAX|VSTAR|GX/.test(c.name)) out.push(P(T('⭐ Es un Pokémon especial (ex / V / GX…): más fuerte, pero si queda Fuera de Combate el rival coge <b>2 Premios</b> (3 si es VMAX).')));
+    out.push(P(T('❤️ <b>{0} PS</b> (puntos de salud) · Tipo: {1}', c.hp, esc((c.types || []).join(', ')))));
     for (const a of c.abilities || [])
-      out.push(P(`✨ <b>${esc(a.type || 'Habilidad')}: ${esc(a.name)}</b><br>${esc(a.effect || '')}`));
+      out.push(P(`✨ <b>${esc(a.type || T('Habilidad'))}: ${esc(a.name)}</b><br>${esc(a.effect || '')}`));
     for (const a of c.attacks || [])
-      out.push(P(`⚔️ <b>${esc(a.name)}</b>${a.damage ? ` — <b>${esc(a.damage)}</b> de daño` : ''}<br>Necesita: ${(a.cost || []).length ? esc(a.cost.join(' + ')) : 'nada (gratis)'}${a.effect ? '<br>' + esc(a.effect) : ''}`));
+      out.push(P(`⚔️ <b>${esc(a.name)}</b>${a.damage ? ' — ' + T('<b>{0}</b> de daño', esc(a.damage)) : ''}<br>${T('Necesita:')} ${(a.cost || []).length ? esc(a.cost.join(' + ')) : T('nada (gratis)')}${a.effect ? '<br>' + esc(a.effect) : ''}`));
     const w = (c.weaknesses || []).map(x => `${x.type} ${x.value}`).join(', ');
     const r = (c.resistances || []).map(x => `${x.type} ${x.value}`).join(', ');
-    out.push(LI([w && `Debilidad: <b>${esc(w)}</b> (recibe más daño de ese tipo)`, r && `Resistencia: ${esc(r)}`,
-      c.retreat != null && `Coste de retirada: <b>${c.retreat}</b> Energía(s) para cambiarlo por uno de la Banca`]));
-  } else if (/entren|trainer/i.test(c.category)) {
+    out.push(LI([w && T('Debilidad: <b>{0}</b> (recibe más daño de ese tipo)', esc(w)), r && T('Resistencia: {0}', esc(r)),
+      c.retreat != null && T('Coste de retirada: <b>{0}</b> Energía(s) para cambiarlo por uno de la Banca', c.retreat)]));
+  } else if (/entren|trainer|dresseur|allenat|trainer|トレーナー|训练家|訓練家|트레이너/i.test(c.category)) {
     const tt = String(c.trainerType || '');
-    const kind = /partid|support/i.test(tt) ? '🧑 <b>Partidario</b>: solo puedes jugar <b>1 por turno</b> (y no en el primer turno del que empieza).'
-      : /estad|stadium/i.test(tt) ? '🏟️ <b>Estadio</b>: se queda en juego y afecta a los dos jugadores. Solo hay 1 a la vez.'
-      : /herram|tool/i.test(tt) ? '🔧 <b>Herramienta</b>: se une a uno de tus Pokémon y le da su efecto.'
-      : '🎒 <b>Objeto</b>: puedes jugar <b>todos los que quieras</b> en tu turno.';
-    out.push(P(`Carta de <b>Entrenador</b>. ${kind}`));
-    out.push(cardText(c.effect, 'español'));
+    const kind = /partid|support|サポート|支援|서포트|soutien|unterstütz|aiuto|ondersteun/i.test(tt) ? T('🧑 <b>Partidario</b>: solo puedes jugar <b>1 por turno</b> (y no en el primer turno del que empieza).')
+      : /estad|stadium|スタジアム|竞技场|競技場|스타디움|stade|stadion/i.test(tt) ? T('🏟️ <b>Estadio</b>: se queda en juego y afecta a los dos jugadores. Solo hay 1 a la vez.')
+      : /herram|tool|どうぐ|道具|도구|outil|werkzeug|strument|uitrust/i.test(tt) ? T('🔧 <b>Herramienta</b>: se une a uno de tus Pokémon y le da su efecto.')
+      : T('🎒 <b>Objeto</b>: puedes jugar <b>todos los que quieras</b> en tu turno.');
+    out.push(P(T('Carta de <b>Entrenador</b>.') + ' ' + kind));
+    out.push(cardText(c.effect, lang));
   } else {
-    out.push(P('⚡ Carta de <b>Energía</b>: puedes unir <b>1 por turno</b> a uno de tus Pokémon. Los ataques piden Energías para poder usarse.'));
-    out.push(cardText(c.effect, 'español'));
+    out.push(P(T('⚡ Carta de <b>Energía</b>: puedes unir <b>1 por turno</b> a uno de tus Pokémon. Los ataques piden Energías para poder usarse.')));
+    out.push(cardText(c.effect, lang));
   }
   return out.join('');
 }
@@ -98,10 +101,10 @@ function explainMana(cost){
   const out = []; let generic = 0;
   for (const s of parts) {
     if (/^\d+$/.test(s)) generic += +s;
-    else out.push(s.split('/').map(x => MANA[x] || x).join(' o '));
+    else out.push(s.split('/').map(x => MANA[x] ? T(MANA[x]) : x).join(' ' + T('o') + ' '));
   }
   const count = {}; out.forEach(x => count[x] = (count[x] || 0) + 1);
-  return [generic ? `${generic} de cualquier color` : '', ...Object.entries(count).map(([k, n]) => `${n} ${k}`)].filter(Boolean).join(' + ');
+  return [generic ? T('{0} de cualquier color', generic) : '', ...Object.entries(count).map(([k, n]) => `${n} ${k}`)].filter(Boolean).join(' + ');
 }
 const KEYWORDS = {
   'Flying': 'Vuela: solo la pueden bloquear criaturas con Vuela o Alcance.',
@@ -125,24 +128,25 @@ async function howtoMagic(c){
   const out = [];
   const kinds = [
     [/Land/, '🏔️ <b>Tierra</b>: no cuesta nada. Puedes jugar <b>1 por turno</b> y se gira para dar maná.'],
-    [/Creature/, '🐉 <b>Criatura</b>: se juega en tu fase principal. No puede atacar el turno en que entra (salvo Prisa). Fuerza/Resistencia: <b>' + (c.power ?? '?') + '/' + (c.toughness ?? '?') + '</b>.'],
+    [/Creature/, '🐉 <b>Criatura</b>: se juega en tu fase principal. No puede atacar el turno en que entra (salvo Prisa). Fuerza/Resistencia: <b>{0}</b>.', (c.power ?? '?') + '/' + (c.toughness ?? '?')],
     [/Instant/, '⚡ <b>Instantáneo</b>: lo puedes jugar <b>en cualquier momento</b>, incluso en el turno del rival. Hace su efecto y se va al cementerio.'],
     [/Sorcery/, '📜 <b>Conjuro</b>: solo en <b>tu fase principal</b>. Hace su efecto y se va al cementerio.'],
-    [/Planeswalker/, '🧙 <b>Planeswalker</b>: un aliado poderoso con <b>lealtad</b> (' + (c.loyalty ?? '?') + '). Una vez por turno usas una de sus habilidades (+ suma lealtad, − la gasta). El rival puede atacarle.'],
+    [/Planeswalker/, '🧙 <b>Planeswalker</b>: un aliado poderoso con <b>lealtad</b> ({0}). Una vez por turno usas una de sus habilidades (+ suma lealtad, − la gasta). El rival puede atacarle.', c.loyalty ?? '?'],
     [/Battle/, '🛡️ <b>Batalla</b>: se juega en tu fase principal y tus criaturas la atacan para derrotarla y conseguir su recompensa.'],
     [/Enchantment/, '✨ <b>Encantamiento</b>: se queda en el campo y su efecto dura. Si es un <b>Aura</b>, se pega a una carta.'],
     [/Artifact/, '⚙️ <b>Artefacto</b>: un objeto que se queda en el campo. Si es un <b>Equipo</b>, se equipa a una criatura pagando su coste de equipar.'],
   ];
-  const k = kinds.filter(([re]) => re.test(tl)).map(x => x[1]);
+  const k = kinds.filter(([re]) => re.test(tl)).map(x => T(x[1], x[2]));
   out.push(P(`<b>${esc(tl)}</b>`), ...k.map(P));
-  if (c.mana_cost) out.push(P(`💧 <b>Coste</b>: ` + c.mana_cost.split(' // ').map(m => `${esc(m)} → paga ${esc(explainMana(m) || '0')}`).join(' &nbsp;|&nbsp; ') + ' de maná.'));
-  const kw = (c.keywords || []).map(k => KEYWORDS[k] ? `<b>${k}</b> — ${KEYWORDS[k]}` : null).filter(Boolean);
-  if (kw.length) out.push('<div class="lbl2">Palabras clave</div>' + LI(kw));
-  // Texto en español si existe
-  let es = null;
-  if (c.lang !== 'es') es = await getJSON(`https://api.scryfall.com/cards/${c.set}/${encodeURIComponent(c.collector_number)}/es`).catch(() => null);
-  const text = es?.printed_text || c.printed_text || c.oracle_text || c.card_faces?.map(f => `${f.name}: ${f.oracle_text}`).join('\n\n');
-  out.push(cardText(text, es?.printed_text ? 'español' : 'inglés'));
+  if (c.mana_cost) out.push(P(T('💧 <b>Coste</b>:') + ' ' + c.mana_cost.split(' // ').map(m => `${esc(m)} → ${T('paga {0} de maná', esc(explainMana(m) || '0'))}`).join(' &nbsp;|&nbsp; ')));
+  const kw = (c.keywords || []).map(k => KEYWORDS[k] ? `<b>${k}</b> — ${T(KEYWORDS[k])}` : null).filter(Boolean);
+  if (kw.length) out.push(`<div class="lbl2">${T('Palabras clave')}</div>` + LI(kw));
+  // Texto en el idioma elegido si Scryfall lo tiene
+  const SL = { es: 'es', it: 'it', fr: 'fr', de: 'de', ja: 'ja', zh: 'zhs', ko: 'ko' }[LANG];
+  let tr = null;
+  if (SL && c.lang !== SL) tr = await getJSON(`https://api.scryfall.com/cards/${c.set}/${encodeURIComponent(c.collector_number)}/${SL}`).catch(() => null);
+  const text = tr?.printed_text || c.oracle_text || c.card_faces?.map(f => `${f.name}: ${f.oracle_text}`).join('\n\n');
+  out.push(cardText(text, tr?.printed_text ? LANG_NAME() : 'inglés'));
   return out.join('');
 }
 
@@ -216,21 +220,22 @@ async function howtoLocal(key, c){
   const typeVal = (entries.find(([k]) => /card ?type|^type|category|class/i.test(k)) || [])[1] || c.n;
   const tipo = (TIPOS[key] || []).find(([re]) => re.test(typeVal));
   const out = [];
-  if (tipo) out.push(P(tipo[1]));
+  if (tipo) out.push(P(T(tipo[1])));
   const stats = entries.filter(([k, v]) => !isText(k) && v.length < 60);
   if (stats.length) out.push(`<table class="stats">${stats.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>`);
   for (const [k, v] of entries.filter(([k]) => isText(k))) out.push(cardText(v, 'inglés'));
-  if (!out.length) out.push(P('No hay información del texto de esta carta. Mira la guía "Cómo se juega" de arriba.'));
+  if (!out.length) out.push(P(T('No hay información del texto de esta carta. Mira la guía "Cómo se juega" de arriba.')));
   return out.join('');
 }
 
 // Página con la guía de un juego
 function showGuide(key){
   const g = GUIAS[key]; if (!g) return;
+  redraw = () => showGuide(key);
   out.innerHTML = `${backBtn()}<div class="gpage">
-    <h2>📖 Cómo se juega a ${esc(GAMES[key].label)}</h2>
-    ${g.map(([ico, t, txt]) => `<div class="gstep"><div class="gico">${ico}</div><div><h3>${t}</h3><p>${txt}</p></div></div>`).join('')}
-    <p class="note">Es un resumen para empezar. Cada carta puede cambiar las reglas: lo que dice la carta manda.</p>
+    <h2>${T('📖 Cómo se juega a {0}', esc(GAMES[key].label))}</h2>
+    ${g.map(([ico, t, txt]) => `<div class="gstep"><div class="gico">${ico}</div><div><h3>${T(t)}</h3><p>${T(txt)}</p></div></div>`).join('')}
+    <p class="note">${T('Es un resumen para empezar. Cada carta puede cambiar las reglas: lo que dice la carta manda.')}</p>
   </div>`;
   wireBack();
   toTop();

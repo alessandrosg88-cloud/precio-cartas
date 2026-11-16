@@ -18,6 +18,13 @@
   .wrap{max-width:900px;margin:0 auto;padding:28px 16px 60px}
   h1{font-size:30px;margin:0 0 4px;text-align:center}
   .sub{color:var(--muted);text-align:center;margin:0 0 20px}
+  .langbar{position:relative;display:flex;justify-content:flex-end;margin:-12px 0 6px}
+  .lsel{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer}
+  .lmenu{position:absolute;top:calc(100% + 4px);right:0;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:6px;display:none;min-width:180px}
+  .lmenu.open{display:block}
+  .lmenu button{display:flex;gap:8px;width:100%;border:0;background:none;color:var(--text);padding:8px 10px;border-radius:8px;font-size:15px;cursor:pointer;text-align:left}
+  .lmenu button:hover{background:var(--accent-soft)}
+  .lmenu button.on{background:var(--accent);color:#fff;font-weight:700}
   .picker-game{position:relative;display:flex;justify-content:center;margin-bottom:16px}
   .gsel{display:flex;align-items:center;gap:10px;border:2px solid var(--accent);background:var(--card);color:var(--text);padding:10px 18px;border-radius:14px;font-size:18px;font-weight:700;cursor:pointer;min-width:260px;justify-content:space-between}
   .gsel small{display:block;font-size:12px;color:var(--muted);font-weight:600;text-align:left}
@@ -125,35 +132,39 @@
 </head>
 <body>
 <div class="wrap">
+  <div class="langbar">
+    <button class="lsel" id="lsel" aria-haspopup="listbox" aria-expanded="false">🌐 <span id="lselName"></span> ▾</button>
+    <div class="lmenu" id="lmenu" role="listbox"></div>
+  </div>
   <h1>🔎 Precio Cartas</h1>
-  <p class="sub">Escribe o escanea el código de tu carta y mira cuánto vale.</p>
+  <p class="sub" data-t="Escribe o escanea el código de tu carta y mira cuánto vale."></p>
 
   <div class="picker-game">
     <button class="gsel" id="gsel" aria-haspopup="listbox" aria-expanded="false">
       <span class="ico" id="gselIco"></span>
-      <span style="flex:1"><small>Juego</small><span id="gselName"></span></span>
+      <span style="flex:1"><small data-t="Juego"></small><span id="gselName"></span></span>
       <span class="car">▼</span>
     </button>
     <div class="gmenu" id="tabs" role="listbox"></div>
   </div>
 
   <form id="form">
-    <input id="q" autocomplete="off" placeholder="Código o nombre de la carta">
-    <button type="button" class="cam" id="camBtn" title="Escanear con la cámara" aria-label="Escanear con la cámara">📷</button>
-    <button class="go">Buscar</button>
+    <input id="q" autocomplete="off" data-tp="Código o nombre de la carta">
+    <button type="button" class="cam" id="camBtn" data-tt="Escanear con la cámara">📷</button>
+    <button class="go" data-t="Buscar"></button>
   </form>
 
   <!-- Ventana del escáner -->
   <div class="scan" id="scan">
-    <p>Pon el <b>código de la carta</b> dentro del recuadro verde</p>
+    <p data-t="Pon el <b>código de la carta</b> dentro del recuadro verde"></p>
     <div class="view">
       <video id="video" playsinline muted></video>
       <div class="guide"></div>
     </div>
     <div class="scanbtns">
-      <button class="shoot" id="shoot">📸 Leer código</button>
-      <label class="sec2">🖼️ Subir foto<input type="file" id="photo" accept="image/*" hidden></label>
-      <button class="sec2" id="closeScan">Cerrar</button>
+      <button class="shoot" id="shoot" data-t="📸 Leer código"></button>
+      <label class="sec2"><span data-t="🖼️ Subir foto"></span><input type="file" id="photo" accept="image/*" hidden></label>
+      <button class="sec2" id="closeScan" data-t="Cerrar"></button>
     </div>
     <div id="scanStatus"></div>
   </div>
@@ -161,11 +172,13 @@
   <div class="help" id="help"></div>
   <div id="out"></div>
 
-  <footer>Precios: Cardmarket (guía de precios pública) · TCGplayer · tcgdex.net · ygoprodeck.com · scryfall.com — orientativos.</footer>
+  <footer data-t="Precios: Cardmarket (guía de precios pública) · TCGplayer · tcgdex.net · ygoprodeck.com · scryfall.com · Torekakaku — orientativos."></footer>
 </div>
 
-<script src="guias.js?v=3"></script>
-<script src="como-se-usa.js?v=3"></script>
+<script src="i18n-keys.js?v=5"></script>
+<script src="i18n.js?v=5"></script>
+<script src="guias.js?v=5"></script>
+<script src="como-se-usa.js?v=5"></script>
 <script>
 // =====================================================================
 //  JUEGOS
@@ -247,9 +260,9 @@ showGame();
 
 function showHelp(){
   const g = GAMES[game];
-  $('help').innerHTML = g.help + '<br>Ejemplos: ' + g.ex.map(e => `<span class="ex">${e}</span>`).join('') +
-    `<br><button class="gbtn" id="gbtn">📖 Cómo se juega a ${g.label}</button>` +
-    (g.type !== 'links' && !g.noSealed ? ` <button class="gbtn" id="sbtn">📦 Cajas selladas</button>` : '');
+  $('help').innerHTML = T(g.help) + '<br>' + T('Ejemplos:') + ' ' + g.ex.map(e => `<span class="ex">${e}</span>`).join('') +
+    `<br><button class="gbtn" id="gbtn">${T('📖 Cómo se juega a {0}', g.label)}</button>` +
+    (g.type !== 'links' && !g.noSealed ? ` <button class="gbtn" id="sbtn">${T('📦 Cajas selladas')}</button>` : '');
   $('gbtn').onclick = () => { backStack = []; current = null; showGuide(game); };
   if ($('sbtn')) $('sbtn').onclick = () => { backStack = []; current = null; showSealed(game); };
   $('help').querySelectorAll('.ex').forEach(el => el.onclick = () => { $('q').value = el.textContent; search(); });
@@ -257,9 +270,10 @@ function showHelp(){
 $('form').onsubmit = e => { e.preventDefault(); search(); };
 
 // ===================== UTILIDADES =====================
-const usd = v => (v == null || v === '' || Number(v) === 0) ? null : '$' + Number(v).toFixed(2);
-const eur = v => (v == null || v === '' || Number(v) === 0) ? null : Number(v).toFixed(2).replace('.', ',') + ' €';
-const fecha = d => d ? new Date(d).toLocaleDateString('es-ES') : '';
+const usd = v => money(v, 'USD');
+const money = (v, cur, d = 2) => (v == null || v === '' || Number(v) === 0) ? null : new Intl.NumberFormat(LOCALE(), { style: 'currency', currency: cur, minimumFractionDigits: d, maximumFractionDigits: d }).format(Number(v));
+const eur = v => money(v, 'EUR');
+const fecha = d => d ? new Date(d).toLocaleDateString(LOCALE()) : '';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const normCode = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const normName = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -279,11 +293,11 @@ async function getJSON(url, tries = 4){
   }
 }
 
-function loading(t = 'Buscando…'){ out.innerHTML = `<div class="msg">${t}</div>`; }
+function loading(t = T('Buscando…')){ out.innerHTML = `<div class="msg">${t}</div>`; }
 function error(t){ out.innerHTML = `<div class="msg err">${t}</div>`; }
 function toTop(){ if (out.getBoundingClientRect().top < 0) out.scrollIntoView({ block: 'start' }); }
 function remember(fn){ backStack.push(fn); }
-function backBtn(){ return backStack.length ? '<button class="back" id="back">← Volver</button>' : ''; }
+function backBtn(){ return backStack.length ? `<button class="back" id="back">${T('← Volver')}</button>` : ''; }
 function wireBack(){ const b = $('back'); if (b) b.onclick = () => { const fn = backStack.pop(); fn && fn(); }; }
 
 // ===================== EMPRESAS DE GRADEO =====================
@@ -298,11 +312,11 @@ const GRADERS = [
 ];
 function gradingHTML(value){
   const cheap = value != null && value < 25;
-  return `<details class="grade"><summary>🏅 Gradear esta carta (PSA, CGC, Beckett…)</summary>
+  return `<details class="grade"><summary>${T('🏅 Gradear esta carta (PSA, CGC, Beckett…)')}</summary>
     <table class="gtable">${GRADERS.map(([n, url, p]) =>
-      `<tr><td><a href="${url}" target="_blank" rel="noopener">${n} ↗</a></td><td>${p}</td></tr>`).join('')}</table>
-    ${cheap ? '<p class="note">⚠️ Esta carta vale menos de lo que cuesta gradearla: normalmente solo compensa si sale un 10.</p>' : ''}
-    <p class="note">Precios aproximados por carta (noviembre 2026), sin envío. Cambian a menudo: confírmalos en su web.</p>
+      `<tr><td><a href="${url}" target="_blank" rel="noopener">${n} ↗</a></td><td>${T(p)}</td></tr>`).join('')}</table>
+    ${cheap ? `<p class="note">${T('⚠️ Esta carta vale menos de lo que cuesta gradearla: normalmente solo compensa si sale un 10.')}</p>` : ''}
+    <p class="note">${T('Precios aproximados por carta (noviembre 2026), sin envío. Cambian a menudo: confírmalos en su web.')}</p>
   </details>`;
 }
 
@@ -312,6 +326,7 @@ function gradingHTML(value){
 //  Se cambia de versión con las flechas, deslizando el dedo o con ← → del teclado.
 // =====================================================================
 let current = null;
+let redraw = null; // vuelve a dibujar la pantalla actual al cambiar de idioma
 
 async function showVersions(items, index, build, label){
   current = { items, index: Math.max(0, index), build, label: label || (() => ({ r: '', t: '' })) };
@@ -337,9 +352,9 @@ function drawPicker(){
   labels.forEach(l => { const x = rars.find(x => x.r === l.r); if (x) x.count++; });
   const curR = labels[i].r;
   box.innerHTML = `
-    ${rars.length > 1 && rars.length <= 20 ? `<p class="lbl2">Todas las rarezas de esta carta (${rars.length})</p><div class="chips">${rars.map(x =>
+    ${rars.length > 1 && rars.length <= 20 ? `<p class="lbl2">${T('Todas las rarezas de esta carta ({0})', rars.length)}</p><div class="chips">${rars.map(x =>
       `<button class="chip${x.r === curR ? ' on' : ''}" data-r="${esc(x.r)}">${esc(x.r)}${x.count > 1 ? `<small>×${x.count}</small>` : ''}</button>`).join('')}</div>` : ''}
-    <p class="lbl2">Elige la versión</p>
+    <p class="lbl2">${T('Elige la versión')}</p>
     <select id="vsel">${labels.map((l, k) =>
       `<option value="${k}"${k === i ? ' selected' : ''}>${k + 1}. ${esc([l.t, l.r && !String(l.t).includes(l.r) ? l.r : ''].filter(Boolean).join(' · '))}${l.p ? ' — ' + l.p : ''}</option>`).join('')}</select>`;
   box.querySelectorAll('.chip').forEach(b => b.onclick = () => {
@@ -363,20 +378,21 @@ async function drawCurrent(){
   const me = current, i = me.index;
   let v;
   try { v = await me.build(me.items[i]); }
-  catch (e) { console.error(e); return error('No se pudo cargar esta versión. Inténtalo otra vez.'); }
+  catch (e) { console.error(e); return error(T('No se pudo cargar esta versión. Inténtalo otra vez.')); }
   if (me !== current || i !== me.index) return; // el usuario ya cambió de versión
   render(v);
 }
 
 // Dibuja una carta. v.rows = [[etiqueta, valor] | ['#Sección']]
 function render(v){
+  redraw = current ? () => drawCurrent() : () => render(v);
   const n = current?.items.length || 1, i = current?.index || 0;
   const isSec = r => r[0].startsWith('#');
   const kept = v.rows.filter(r => isSec(r) || r[1]);
   const clean = kept.filter((r, k) => !isSec(r) || (kept[k + 1] && !isSec(kept[k + 1])));
   const tr = clean.map(r => isSec(r)
-    ? `<tr><td class="sec" colspan="2">${r[0].slice(1)}</td></tr>`
-    : `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+    ? `<tr><td class="sec" colspan="2">${T(r[0].slice(1))}</td></tr>`
+    : `<tr><td>${T(r[0])}</td><td>${r[1]}</td></tr>`).join('');
   const dots = n > 1 && n <= 24 ? `<div class="dots">${Array.from({length: n}, (_, k) => `<span class="dot${k === i ? ' on' : ''}"></span>`).join('')}</div>` : '';
   out.innerHTML = `
     ${backBtn()}
@@ -384,9 +400,9 @@ function render(v){
       <div class="pic">
         ${v.img ? `<img src="${v.img}" alt="${esc(v.name)}">` : '<img alt="">'}
         ${n > 1 ? `<div class="nav">
-            <button class="arrow" id="prev" aria-label="Versión anterior">‹</button>
-            <div class="vlabel"><b>Versión ${i + 1} de ${n}</b>${esc(v.versionLabel || v.rarity || '')}</div>
-            <button class="arrow" id="next" aria-label="Versión siguiente">›</button>
+            <button class="arrow" id="prev" aria-label="${T('Versión anterior')}">‹</button>
+            <div class="vlabel"><b>${T('Versión {0} de {1}', i + 1, n)}</b>${esc(v.versionLabel || v.rarity || '')}</div>
+            <button class="arrow" id="next" aria-label="${T('Versión siguiente')}">›</button>
           </div>${dots}` : ''}
       </div>
       <div>
@@ -394,16 +410,16 @@ function render(v){
         <p class="meta">${v.meta}</p>
         ${v.rarity ? `<span class="rar">✦ ${esc(v.rarity)}</span>` : ''}
         <div class="picker" id="vpick"></div>
-        <div class="big"><div class="lbl">${v.mainLabel}</div><div class="val">${v.mainValue || 'Sin precio'}</div>
-          ${v.approx ? `<div class="approx">${v.approx}</div>` : ''}
-          <div class="upd">${v.updated ? esc(v.updated) + ' · ' : ''}consultado a las ${new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})}
-            ${v.reload ? '<button class="refresh" id="refresh">🔄 Actualizar precio</button>' : ''}</div></div>
-        <table>${tr || '<tr><td>No hay más precios disponibles</td><td></td></tr>'}</table>
+        <div class="big"><div class="lbl">${T(v.mainLabel)}</div><div class="val">${v.mainValue || T('Sin precio')}</div>
+          ${v.approx ? `<div class="approx">${T(v.approx)}</div>` : ''}
+          <div class="upd">${v.updated ? esc(v.updated) + ' · ' : ''}${T('consultado a las {0}', new Date().toLocaleTimeString(LOCALE(), {hour:'2-digit', minute:'2-digit'}))}
+            ${v.reload ? `<button class="refresh" id="refresh">${T('🔄 Actualizar precio')}</button>` : ''}</div></div>
+        <table>${tr || `<tr><td>${T('No hay más precios disponibles')}</td><td></td></tr>`}</table>
         <div class="links">
-          ${v.openSet ? '<button class="main" id="openSet">📚 Ver la expansión entera</button>' : ''}
-          ${v.links.filter(l => l[1]).map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${l[0]} ↗</a>`).join('')}
+          ${v.openSet ? `<button class="main" id="openSet">${T('📚 Ver la expansión entera')}</button>` : ''}
+          ${v.links.filter(l => l[1]).map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${T(l[0])} ↗</a>`).join('')}
         </div>
-        ${v.howto ? `<details class="howto" open><summary>📖 Cómo se usa esta carta</summary><div id="howto"><p>Cargando…</p></div></details>` : ''}
+        ${v.howto ? `<details class="howto" open><summary>${T('📖 Cómo se usa esta carta')}</summary><div id="howto"><p>${T('Cargando…')}</p></div></details>` : ''}
         ${v.sealed ? '' : gradingHTML(v.value)}
       </div>
     </div>`;
@@ -411,14 +427,14 @@ function render(v){
     const me = current, idx = current?.index;
     Promise.resolve().then(v.howto).then(html => {
       if (current === me && current?.index === idx && $('howto')) $('howto').innerHTML = html;
-    }).catch(() => { if ($('howto')) $('howto').innerHTML = '<p>No se pudo cargar la explicación.</p>'; });
+    }).catch(() => { if ($('howto')) $('howto').innerHTML = `<p>${T('No se pudo cargar la explicación.')}</p>`; });
   }
   wireBack();
   if (n > 1) { $('prev').onclick = () => go(-1); $('next').onclick = () => go(1); }
   drawPicker();
   if (v.reload) $('refresh').onclick = async () => {
-    $('refresh').textContent = 'Actualizando…';
-    try { await v.reload(); } catch (e) { $('refresh').textContent = '⚠️ Error, reintenta'; }
+    $('refresh').textContent = T('Actualizando…');
+    try { await v.reload(); } catch (e) { $('refresh').textContent = T('⚠️ Error, reintenta'); }
   };
   if (v.openSet) $('openSet').onclick = () => {
     const snap = { ...current };
@@ -445,9 +461,10 @@ document.addEventListener('keydown', e => {
 // items: [{ img, title, sub, price, open }]
 function renderGrid(title, items, { sort } = {}){
   const draw = list => {
+    redraw = () => $('q').value.trim() ? search() : (out.innerHTML = ''); // al cambiar idioma se vuelve a buscar
     out.innerHTML = `${backBtn()}
       <div class="bar"><h2>${title}</h2>
-        ${sort ? `<select id="sort"><option value="num">Ordenar por número</option><option value="hi">Más caras primero</option><option value="lo">Más baratas primero</option></select>` : ''}
+        ${sort ? `<select id="sort"><option value="num">${T('Ordenar por número')}</option><option value="hi">${T('Más caras primero')}</option><option value="lo">${T('Más baratas primero')}</option></select>` : ''}
       </div>
       <div class="list">${list.map((it, k) => `<div class="item" data-k="${k}">
           <img src="${it.img || ''}" loading="lazy" alt="">
@@ -485,7 +502,7 @@ async function search(){
     else searchLinks(q);
   } catch (e) {
     console.error(e);
-    error('No se pudo conectar con la base de datos. Inténtalo de nuevo en unos segundos.');
+    error(T('No se pudo conectar con la base de datos. Inténtalo de nuevo en unos segundos.'));
   }
 }
 
@@ -520,19 +537,19 @@ async function searchPokemon(q){
     cards = await cardsInSets(sets.map(s => s.id), m[1]);
   } else if ((m = q.match(/^([a-z0-9-]{2,6})\s+(\w+?)(?:\/\d+)?$/i))) {
     const ids = await pokemonSetIds(m[1]);
-    if (!ids.length) return error(`No conozco el set "${esc(m[1].toUpperCase())}". Revisa el código.`);
+    if (!ids.length) return error(T('No conozco el set "{0}". Revisa el código.', esc(m[1].toUpperCase())));
     cards = await cardsInSets(ids, m[2]);
   } else {
     const list = (await getJSON(`${PKM}/cards?name=${encodeURIComponent(q)}`)) || [];
-    if (!list.length) return error('No encontré esa carta. Revisa el código (ej. OBF 125).');
+    if (!list.length) return error(T('No encontré esa carta. Revisa el código (ej. OBF 125).'));
     if (list.length === 1) return openPokemon(await getJSON(`${PKM}/cards/${list[0].id}`));
-    return renderGrid(`${list.length} resultados`, list.slice(-80).reverse().map(b => ({
+    return renderGrid(T('{0} resultados', list.length), list.slice(-80).reverse().map(b => ({
       img: pkmImg(b, 'low'), title: b.name, sub: b.id,
-      open: async () => { loading('Cargando…'); openPokemon(await getJSON(`${PKM}/cards/${b.id}`)); } })));
+      open: async () => { loading(T('Cargando…')); openPokemon(await getJSON(`${PKM}/cards/${b.id}`)); } })));
   }
-  if (!cards.length) return error('No encontré esa carta. Revisa el código (ej. OBF 125).');
+  if (!cards.length) return error(T('No encontré esa carta. Revisa el código (ej. OBF 125).'));
   if (cards.length === 1) return openPokemon(cards[0]);
-  renderGrid(`${cards.length} cartas con ese número`, cards.map(c => ({
+  renderGrid(T('{0} cartas con ese número', cards.length), cards.map(c => ({
     img: pkmImg(c, 'low'), title: c.name, sub: `${c.set.name} ${c.localId}`, open: () => openPokemon(c) })));
 }
 
@@ -575,7 +592,7 @@ function pokemonView(c){
   for (const [k, p] of Object.entries(tp)) {
     if (!p || typeof p !== 'object') continue;
     tpId = tpId || p.productId;
-    rows.push([`${NAMES[k] || k} — mercado`, usd(p.marketPrice) || usd(p.midPrice)]);
+    rows.push([T('{0} — mercado', T(NAMES[k] || k)), usd(p.marketPrice) || usd(p.midPrice)]);
   }
   const main = cm.trend || cm.avg;
   const firstTp = Object.values(tp).find(p => p && typeof p === 'object');
@@ -588,7 +605,7 @@ function pokemonView(c){
     rows,
     links: [['Cardmarket', `https://www.cardmarket.com/es/Pokemon/Products/Search?searchString=${encodeURIComponent(c.name)}`],
             ['TCGplayer', tpId ? `https://www.tcgplayer.com/product/${tpId}` : null]],
-    updated: cm.updated ? 'Cardmarket del ' + fecha(cm.updated) : '',
+    updated: cm.updated ? T('Cardmarket del {0}', fecha(cm.updated)) : '',
     reload: async () => { pkmCache[c.id] = await getJSON(`${PKM}/cards/${c.id}`); drawCurrent(); },
     openSet: c.set?.id ? () => openPokemonSet(c.set.id) : null,
     howto: () => howtoPokemon(c.id),
@@ -596,12 +613,12 @@ function pokemonView(c){
 }
 
 async function openPokemonSet(id){
-  loading('Cargando la expansión…');
+  loading(T('Cargando la expansión…'));
   const s = await getJSON(`${PKM}/sets/${id}`);
-  if (!s) return error('No se pudo cargar la expansión.');
-  renderGrid(`${esc(s.name)} · ${s.cards.length} cartas <span class="note">(toca una carta para ver su precio)</span>`,
+  if (!s) return error(T('No se pudo cargar la expansión.'));
+  renderGrid(`${esc(s.name)} · ${T('{0} cartas', s.cards.length)} <span class="note">${T('(toca una carta para ver su precio)')}</span>`,
     s.cards.map(b => ({ img: pkmImg(b, 'low'), title: b.name, sub: 'Nº ' + b.localId,
-      open: async () => { loading('Cargando…'); openPokemon(await getJSON(`${PKM}/cards/${b.id}`)); } })));
+      open: async () => { loading(T('Cargando…')); openPokemon(await getJSON(`${PKM}/cards/${b.id}`)); } })));
 }
 
 // =====================================================================
@@ -619,13 +636,13 @@ async function searchYugioh(q){
         return openYugioh(card, code, info.set_rarity);
       }
     }
-    return error('No encontré ese código. Revisa que esté bien escrito (ej. LOB-EN001).');
+    return error(T('No encontré ese código. Revisa que esté bien escrito (ej. LOB-EN001).'));
   }
   const r = await getJSON(`${YGO}/cardinfo.php?fname=${encodeURIComponent(q)}`);
   const cards = r?.data || [];
-  if (!cards.length) return error('No encontré esa carta. Prueba con el código o el nombre en inglés.');
+  if (!cards.length) return error(T('No encontré esa carta. Prueba con el código o el nombre en inglés.'));
   if (cards.length === 1) return openYugioh(cards[0]);
-  renderGrid(`${cards.length} resultados`, cards.slice(0, 80).map(c => ({
+  renderGrid(T('{0} resultados', cards.length), cards.slice(0, 80).map(c => ({
     img: c.card_images?.[0]?.image_url_small, title: c.name,
     price: eur(c.card_prices?.[0]?.cardmarket_price), open: () => openYugioh(c) })));
 }
@@ -661,22 +678,29 @@ function yugiohView(c, set){
             ['Ficha', c.ygoprodeck_url]],
     reload: async () => { const n = (await getJSON(`${YGO}/cardinfo.php?id=${c.id}`))?.data?.[0]; if (n) { Object.assign(c, n); drawCurrent(); } },
     openSet: set ? () => openYugiohSet(set.set_name) : null,
-    howto: () => howtoYugioh(c),
+    howto: async () => {
+      // texto de la carta en francés, alemán o italiano si YGOPRODeck lo tiene
+      if (['fr', 'de', 'it'].includes(LANG)) {
+        const t = (await getJSON(`${YGO}/cardinfo.php?id=${c.id}&language=${LANG}`).catch(() => null))?.data?.[0];
+        if (t) return howtoYugioh({ ...c, desc: t.desc, pend_desc: t.pend_desc, monster_desc: t.monster_desc, _lang: LANG_NAME() });
+      }
+      return howtoYugioh(c);
+    },
   };
 }
 
 async function openYugiohSet(name){
-  loading('Cargando la expansión…');
+  loading(T('Cargando la expansión…'));
   const r = await getJSON(`${YGO}/cardinfo.php?cardset=${encodeURIComponent(name)}`);
   const cards = r?.data || [];
-  if (!cards.length) return error('No se pudo cargar la expansión.');
+  if (!cards.length) return error(T('No se pudo cargar la expansión.'));
   const items = [];
   for (const c of cards) for (const s of c.card_sets || []) if (s.set_name === name) items.push({
     img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${s.set_rarity}`,
     price: usd(s.set_price), v: Number(s.set_price) || null, code: s.set_code,
     open: () => openYugioh(c, s.set_code.toUpperCase(), s.set_rarity) });
   items.sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true }));
-  renderGrid(`${esc(name)} · ${items.length} cartas`, items, { sort: true });
+  renderGrid(`${esc(name)} · ${T('{0} cartas', items.length)}`, items, { sort: true });
 }
 
 // =====================================================================
@@ -691,9 +715,9 @@ async function searchMagic(q){
   }
   const r = await getJSON(`${MTG}/cards/search?order=name&q=${encodeURIComponent(q)}`);
   const cards = r?.data || [];
-  if (!cards.length) return error('No encontré esa carta. Revisa el código (ej. MH3 123) o el nombre en inglés.');
+  if (!cards.length) return error(T('No encontré esa carta. Revisa el código (ej. MH3 123) o el nombre en inglés.'));
   if (cards.length === 1) return openMagic(cards[0]);
-  renderGrid(`${cards.length} resultados`, cards.slice(0, 80).map(c => ({
+  renderGrid(T('{0} resultados', cards.length), cards.slice(0, 80).map(c => ({
     img: mtgImg(c, 'small'), title: c.name, price: eur(c.prices?.eur) || usd(c.prices?.usd), open: () => openMagic(c) })));
 }
 const mtgImg = (c, size) => c.image_uris?.[size] || c.card_faces?.[0]?.image_uris?.[size];
@@ -728,14 +752,14 @@ function magicView(c){
 }
 
 async function openMagicSet(code, name){
-  loading('Cargando la expansión…');
+  loading(T('Cargando la expansión…'));
   let url = `${MTG}/cards/search?order=set&unique=prints&q=${encodeURIComponent('e:' + code)}`, cards = [];
   for (let page = 0; url && page < 4; page++) {
     const r = await getJSON(url); if (!r) break;
     cards.push(...r.data); url = r.has_more ? r.next_page : null;
   }
-  if (!cards.length) return error('No se pudo cargar la expansión.');
-  renderGrid(`${esc(name)} · ${cards.length} cartas`, cards.map(c => ({
+  if (!cards.length) return error(T('No se pudo cargar la expansión.'));
+  renderGrid(`${esc(name)} · ${T('{0} cartas', cards.length)}`, cards.map(c => ({
     img: mtgImg(c, 'small'), title: c.name, sub: `Nº ${c.collector_number} · ${c.rarity}`,
     price: eur(c.prices?.eur) || usd(c.prices?.usd), v: Number(c.prices?.eur) || Number(c.prices?.usd) || null,
     open: () => openMagic(c) })), { sort: true });
@@ -764,7 +788,7 @@ async function loadLocal(key){
 }
 const tcgImg = (c, big) => c.y !== undefined ? `https://torekakaku.com/dm/image/${c.id}.jpg`
   : `https://tcgplayer-cdn.tcgplayer.com/product/${c.id}_${big ? 'in_1000x1000' : '200w'}.jpg`;
-const yen = v => v ? '¥' + Number(v).toLocaleString('ja-JP') : null;
+const yen = v => money(v, 'JPY', 0);
 // Rareza + tipo de versión sacado del nombre: "SEC · Alt Art", "SEC · Manga", "SR · Parallel"…
 const localRarity = c => {
   const tags = [...String(c.n).matchAll(/[(\[]([^)\]]+)[)\]]/g)].map(m => m[1].trim())
@@ -776,30 +800,30 @@ const localValue = c => c.y || c.e || c.u || null;
 const localPrice = c => c.y !== undefined ? yen(c.y) : eur(c.e) || usd(c.u);
 
 async function searchLocal(q){
-  loading('Cargando datos del juego…');
+  loading(T('Cargando datos del juego…'));
   const d = await loadLocal(game).catch(() => null);
-  if (!d) return error('Los datos de este juego aún no están listos. Vuelve a intentarlo en unos minutos.');
+  if (!d) return error(T('Los datos de este juego aún no están listos. Vuelve a intentarlo en unos minutos.'));
   const k = normCode(q);
   let found = d.byCode[k] || [];
   if (!found.length && /\d/.test(q)) {                 // código parcial: "OP01-12" -> empieza por
     found = d.cards.filter(c => c.k.startsWith(k) || c.k1.startsWith(k));
     if (found.length > 1 && new Set(found.map(c => c.k1)).size > 1) {
-      return gridLocal(`${found.length} cartas`, found);
+      return gridLocal(T('{0} cartas', found.length), found);
     }
   }
   if (found.length) {
-    if (new Set(found.map(c => c.b)).size > 1) return gridLocal(`${found.length} cartas con ese código`, found);
+    if (new Set(found.map(c => c.b)).size > 1) return gridLocal(T('{0} cartas con ese código', found.length), found);
     const v = sameCard(d, found[0]); return openLocal(v[0], v); // empieza por la versión normal
   }
   const words = normName(q).split(/\s+/).filter(Boolean);
   const byName = d.cards.filter(c => words.every(w => c.nn.includes(w)));
-  if (!byName.length) return error('No encontré esa carta. Revisa el código o escribe el nombre en inglés.');
+  if (!byName.length) return error(T('No encontré esa carta. Revisa el código o escribe el nombre en inglés.'));
   // agrupa las versiones de la misma carta y muestra una por grupo
   const groups = {};
   for (const c of byName) (groups[c.k1 + '|' + c.b] ||= []).push(c);
   const reps = Object.values(groups).map(g => g.sort((a, b) => (localValue(a) ?? 1e9) - (localValue(b) ?? 1e9))[0]);
   if (reps.length === 1) return openLocal(reps[0], sameCard(d, reps[0]));
-  gridLocal(`${reps.length} resultados`, reps);
+  gridLocal(T('{0} resultados', reps.length), reps);
 }
 
 // Todas las versiones (rarezas, paralelas, alt art…) de la misma carta
@@ -842,11 +866,11 @@ function localView(key, c){
     rows,
     links: [['Cardmarket', cmLink], ['TCGplayer', `https://www.tcgplayer.com/product/${c.id}`]],
     howto: () => howtoLocal(key, c),
-    updated: c.e ? 'Cardmarket del ' + fecha(d.cmUpdated || d.updated) : 'TCGplayer del ' + fecha(d.updated),
+    updated: c.e ? T('Cardmarket del {0}', fecha(d.cmUpdated || d.updated)) : T('TCGplayer del {0}', fecha(d.updated)),
     openSet: () => {
       const list = d.cards.filter(x => x.g === c.g)
         .sort((a, b) => String(a.c).localeCompare(String(b.c), 'en', { numeric: true }));
-      gridLocal(`${esc(set.n || 'Expansión')} · ${list.length} cartas`, list, { sort: true });
+      gridLocal(`${esc(set.n || T('Expansión'))} · ${T('{0} cartas', list.length)}`, list, { sort: true });
     },
   };
 }
@@ -865,11 +889,11 @@ function dmView(key, c, d, set){
             ['Yuyu-tei', `https://yuyu-tei.jp/sell/dm/s/search?search_word=${q}`],
             ['eBay', `https://www.ebay.es/sch/i.html?_nkw=${encodeURIComponent('duel masters ' + c.n)}`],
             ['Ficha oficial', 'https://dm.takaratomy.co.jp/card/']],
-    howto: async () => '<p>El texto oficial de esta carta (en japonés) está en la <a href="https://dm.takaratomy.co.jp/card/" target="_blank" rel="noopener">base de datos de Takara Tomy ↗</a>. Para aprender a jugar, pulsa arriba en <b>📖 Cómo se juega a Duel Masters</b>.</p>',
-    updated: 'Torekakaku del ' + fecha(d.updated),
+    howto: async () => '<p>' + T('El texto oficial de esta carta (en japonés) está en la {0}. Para aprender a jugar, pulsa arriba en <b>📖 Cómo se juega a Duel Masters</b>.', `<a href="https://dm.takaratomy.co.jp/card/" target="_blank" rel="noopener">${T('base de datos de Takara Tomy')} ↗</a>`) + '</p>',
+    updated: T('Torekakaku del {0}', fecha(d.updated)),
     openSet: () => {
       const list = d.cards.filter(x => x.g === c.g).sort((a, b) => String(a.c).localeCompare(String(b.c), 'ja', { numeric: true }));
-      gridLocal(`${esc(set.n || 'Pack')} · ${list.length} cartas`, list, { sort: true });
+      gridLocal(`${esc(set.n || 'Pack')} · ${T('{0} cartas', list.length)}`, list, { sort: true });
     },
   };
 }
@@ -881,10 +905,10 @@ const SEALED_TYPES = { box: '📦 Cajas de sobres', etb: '🎁 Elite Trainer Box
   pack: '🃏 Sobres', deck: '🂠 Mazos', coll: '🎀 Colecciones y packs', other: '➕ Otros' };
 const sealedData = {};
 async function showSealed(key){
-  loading('Cargando productos sellados…');
+  loading(T('Cargando productos sellados…'));
   if (!sealedData[key]) {
     const r = await fetch(`data/sealed/${key}.json`).catch(() => null);
-    if (!r || !r.ok) return error('Los precios de productos sellados de este juego aún no están listos.');
+    if (!r || !r.ok) return error(T('Los precios de productos sellados de este juego aún no están listos.'));
     sealedData[key] = await r.json();
   }
   const d = sealedData[key];
@@ -893,25 +917,26 @@ async function showSealed(key){
   const val = i => i.e || i.u || null;
   // las colecciones "Miscellaneous" / promos no tienen fecha real: al final
   const setDate = i => /misc|promo|other/i.test(d.sets[i.g]?.n || '') ? '0' : String(d.sets[i.g]?.d || '');
+  redraw = () => showSealed(key);
   const draw = () => {
     let list = d.items.filter(i => (type === 'all' || i.t === type) && (!q || normName(i.n + ' ' + (d.sets[i.g]?.n || '')).includes(q)));
     list.sort(sort === 'hi' ? (a, b) => (val(b) ?? -1) - (val(a) ?? -1)
       : sort === 'lo' ? (a, b) => (val(a) ?? 1e9) - (val(b) ?? 1e9)
       : (a, b) => setDate(b).localeCompare(setDate(a)));
     out.innerHTML = `${backBtn()}
-      <div class="bar"><h2>📦 Productos sellados · ${esc(GAMES[key].label)}</h2>
-        <select id="ssort"><option value="new">Más nuevos primero</option><option value="hi">Más caros primero</option><option value="lo">Más baratos primero</option></select></div>
+      <div class="bar"><h2>${T('📦 Productos sellados · {0}', esc(GAMES[key].label))}</h2>
+        <select id="ssort"><option value="new">${T('Más nuevos primero')}</option><option value="hi">${T('Más caros primero')}</option><option value="lo">${T('Más baratos primero')}</option></select></div>
       <div class="sfilters">
-        <button class="chip${type === 'all' ? ' on' : ''}" data-t="all">Todo</button>
-        ${types.map(t => `<button class="chip${type === t ? ' on' : ''}" data-t="${t}">${SEALED_TYPES[t]}</button>`).join('')}
+        <button class="chip${type === 'all' ? ' on' : ''}" data-t="all">${T('Todo')}</button>
+        ${types.map(t => `<button class="chip${type === t ? ' on' : ''}" data-t="${t}">${T(SEALED_TYPES[t])}</button>`).join('')}
       </div>
-      <input class="sfind" id="sfind" placeholder="Buscar por expansión o nombre (ej. 151, Romance Dawn…)" value="${esc(q)}">
-      <p class="note">${list.length} productos · Precios del ${fecha(d.cmUpdated || d.updated)} (Cardmarket €, si no TCGplayer $)</p>
+      <input class="sfind" id="sfind" placeholder="${T('Buscar por expansión o nombre (ej. 151, Romance Dawn…)')}" value="${esc(q)}">
+      <p class="note">${T('{0} productos · Precios del {1} (Cardmarket €, si no TCGplayer $)', list.length, fecha(d.cmUpdated || d.updated))}</p>
       <div class="list">${list.slice(0, limit).map((i, k) => `<div class="item" data-k="${k}">
         <img src="${tcgImg(i)}" loading="lazy" alt="">
         <div>${esc(i.n)}</div><div class="note">${esc(d.sets[i.g]?.n || '')}</div>
         <div class="p">${eur(i.e) || usd(i.u) || '—'}</div></div>`).join('')}</div>
-      ${list.length > limit ? '<button class="more" id="more">Ver más</button>' : ''}`;
+      ${list.length > limit ? `<button class="more" id="more">${T('Ver más')}</button>` : ''}`;
     wireBack();
     out.querySelectorAll('.sfilters .chip').forEach(b => b.onclick = () => { type = b.dataset.t; limit = 60; draw(); });
     $('ssort').value = sort; $('ssort').onchange = e => { sort = e.target.value; draw(); };
@@ -931,8 +956,8 @@ function sealedView(key, i){
   const d = sealedData[key], g = GAMES[key];
   current = null;
   render({
-    img: tcgImg(i, true), name: i.n, rarity: SEALED_TYPES[i.t]?.replace(/^\S+\s/, ''),
-    meta: esc(d.sets[i.g]?.n || '') + (d.sets[i.g]?.d ? ' · salió el ' + fecha(d.sets[i.g].d) : ''),
+    img: tcgImg(i, true), name: i.n, rarity: T(SEALED_TYPES[i.t] || '').replace(/^\S+\s/, ''),
+    meta: esc(d.sets[i.g]?.n || '') + (d.sets[i.g]?.d ? ' · ' + T('salió el {0}', fecha(d.sets[i.g].d)) : ''),
     mainLabel: i.e ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
     mainValue: eur(i.e) || usd(i.u), value: null,
     rows: [['#Cardmarket (Europa)'], ['Tendencia', eur(i.e)], ['Desde', eur(i.el)], ['Media 30 días', eur(i.e30)],
@@ -940,7 +965,7 @@ function sealedView(key, i){
     links: [['Cardmarket', i.cm ? `https://www.cardmarket.com/es/${g.cm}/Products?idProduct=${i.cm}`
               : `https://www.cardmarket.com/es/${g.cm}/Products/Search?searchString=${encodeURIComponent(i.n)}`],
             ['TCGplayer', `https://www.tcgplayer.com/product/${i.id}`]],
-    updated: (i.e ? 'Cardmarket del ' : 'TCGplayer del ') + fecha(d.cmUpdated || d.updated),
+    updated: T(i.e ? 'Cardmarket del {0}' : 'TCGplayer del {0}', fecha(d.cmUpdated || d.updated)),
     sealed: true,
   });
 }
@@ -989,7 +1014,7 @@ async function openScan(){
     video.srcObject = stream;
     await video.play();
   } catch (e) {
-    setStatus('No se pudo abrir la cámara. Da permiso a la cámara o usa "Subir foto".');
+    setStatus(T('No se pudo abrir la cámara. Da permiso a la cámara o usa "Subir foto".'));
   }
 }
 function closeScan(){
@@ -1027,19 +1052,19 @@ async function loadOCR(){
   return ocrWorker;
 }
 async function readImage(canvas){
-  if (!canvas) return setStatus('La cámara aún no está lista, espera un segundo.');
-  setStatus('Leyendo el código… ⏳');
+  if (!canvas) return setStatus(T('La cámara aún no está lista, espera un segundo.'));
+  setStatus(T('Leyendo el código… ⏳'));
   try {
     const worker = await loadOCR();
     const { data } = await worker.recognize(canvas);
     const code = await extractCode(data.text);
-    if (!code) return setStatus('No pude leer un código. Acerca más la cámara, con buena luz, y vuelve a intentarlo.');
+    if (!code) return setStatus(T('No pude leer un código. Acerca más la cámara, con buena luz, y vuelve a intentarlo.'));
     closeScan();
     $('q').value = code;
     search();
   } catch (e) {
     console.error(e);
-    setStatus('Error al leer la imagen. Inténtalo otra vez.');
+    setStatus(T('Error al leer la imagen. Inténtalo otra vez.'));
   }
 }
 // Corrige letras que el lector confunde con números (O→0, I→1…)
@@ -1085,7 +1110,28 @@ async function extractCode(raw){
   return null;
 }
 
-showHelp();
+// ===================== IDIOMA =====================
+$('lmenu').innerHTML = LANGS.map(([k, name, flag]) => `<button data-lang="${k}">${flag} ${name}</button>`).join('');
+function applyLang(){
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-t]').forEach(el => el.innerHTML = T(el.dataset.t));
+  document.querySelectorAll('[data-tp]').forEach(el => el.placeholder = T(el.dataset.tp));
+  document.querySelectorAll('[data-tt]').forEach(el => { el.title = T(el.dataset.tt); el.setAttribute('aria-label', T(el.dataset.tt)); });
+  const L = LANGS.find(l => l[0] === LANG);
+  $('lselName').textContent = L[2] + ' ' + L[1];
+  document.querySelectorAll('#lmenu button').forEach(b => b.classList.toggle('on', b.dataset.lang === LANG));
+  showHelp();
+}
+function toggleLang(open){ $('lmenu').classList.toggle('open', open); $('lsel').setAttribute('aria-expanded', open); }
+$('lsel').onclick = e => { e.stopPropagation(); toggleLang(!$('lmenu').classList.contains('open')); };
+document.addEventListener('click', e => { if (!e.target.closest('.langbar')) toggleLang(false); });
+document.querySelectorAll('#lmenu button').forEach(b => b.onclick = () => {
+  toggleLang(false);
+  setLang(b.dataset.lang);
+  loadLang(LANG).then(() => { applyLang(); if (redraw) redraw(); });
+});
+applyLang();
+if (LANG !== 'es') loadLang(LANG).then(() => { applyLang(); if (redraw) redraw(); });
 </script>
 </body>
 </html>
