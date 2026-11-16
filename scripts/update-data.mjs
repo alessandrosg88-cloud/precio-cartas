@@ -233,6 +233,46 @@ function matchSealed(list, cm, sets = {}){
   return n;
 }
 
+// ---------- Duel Masters (Torekakaku, precios en yenes de Japón) ----------
+// Duel Masters no está en Cardmarket ni en TCGplayer. Torekakaku publica el precio de cada carta.
+// Su robots.txt permite el acceso; vamos despacio (1 página cada ~1,2 s) para no cargar su servidor.
+const TK = 'https://torekakaku.com';
+const decode = s => String(s).replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'")
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+async function getText(url, tries = 3){
+  for (let i = 1; ; i++) {
+    try { const r = await fetch(url, { headers: UA }); if (!r.ok) throw new Error(r.status + ' ' + url); return await r.text(); }
+    catch (e) { if (i >= tries) throw e; await sleep(3000 * i); }
+  }
+}
+async function loadDuelMasters(){
+  const html = await getText(`${TK}/dm/packlist/`);
+  const packs = [...html.matchAll(/href="\/dm\/cardlist\/\?packid=(\d+)"[^>]*>([\s\S]*?)<\/a>/g)].map(m => {
+    const t = decode(m[2]);
+    const d = (t.match(/発売日[:：]\s*(\d{4}\/\d{2}\/\d{2})/) || [])[1] || '';
+    return { id: m[1], n: t.replace(/発売日[\s\S]*$/, '').trim(), d: d.replace(/\//g, '-') };
+  });
+  const sets = {}, cards = [], seen = new Set();
+  for (const pk of [...new Map(packs.map(x => [x.id, x])).values()]) {
+    await sleep(1200);
+    let h; try { h = await getText(`${TK}/dm/cardlist/?packid=${pk.id}`); } catch (e) { console.log('   ⚠️', e.message); continue; }
+    sets[pk.id] = { n: pk.n, d: pk.d };
+    for (const m of h.matchAll(/href="\/dm\/card\/\?cardid=(\d+)"[^>]*>([\s\S]*?)<\/a>/g)) {
+      if (seen.has(m[1])) continue;
+      const b = m[2], f = cls => (b.match(new RegExp(`class="${cls}"[^>]*>([\\s\\S]*?)<\\/div>`)) || [])[1] || '';
+      const kata = f('rankkata');
+      const rar = decode((kata.match(/class="descitem"[^>]*>([\s\S]*?)<\/span>/) || [])[1] || '');
+      const code = decode(kata.replace(/<span[\s\S]*?<\/span>/, ''));
+      const yen = Number((decode(f('rankkakaku')).match(/([\d,]+)\s*円/) || [])[1]?.replace(/,/g, '')) || null;
+      const name = decode(f('ranktitle'));
+      if (!name) continue;
+      seen.add(m[1]);
+      cards.push({ id: Number(m[1]), n: name, c: code, r: rar, g: pk.id, y: yen });
+    }
+  }
+  return { sets, cards };
+}
+
 await mkdir('data/sealed', { recursive: true });
 const index = {};
 for (const [key, G] of Object.entries(GAMES)) {
@@ -265,6 +305,16 @@ for (const [key, G] of Object.entries(GAMES)) {
   } catch (e) {
     console.log(`   ❌ Error en ${G.name}:`, e.message);
   }
+}
+if (!only || only === 'duelmasters') {
+  console.log('\n== Duel Masters (Torekakaku) ==');
+  try {
+    const dm = await loadDuelMasters();
+    console.log(`   ${dm.cards.length} cartas en ${Object.keys(dm.sets).length} packs, con precio: ${dm.cards.filter(c => c.y).length}`);
+    if (dm.cards.length > 1000) // si algo falla y salen pocas, no machacamos los datos buenos de ayer
+      await writeFile('data/duelmasters.json', JSON.stringify({ game: 'Duel Masters', updated: new Date().toISOString(), currency: 'JPY', sets: dm.sets, cards: dm.cards }));
+    index.duelmasters = { name: 'Duel Masters', cards: dm.cards.length };
+  } catch (e) { console.log('   ❌ Error en Duel Masters:', e.message); }
 }
 if (!only) await writeFile('data/index.json', JSON.stringify(index, null, 1));
 console.log('\nListo.');
