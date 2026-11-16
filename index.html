@@ -207,9 +207,9 @@ const GAMES = {
   wow:       { label: 'World of Warcraft', type: 'local', cm: 'WoW',
     help: 'Busca por <b>nombre</b> de la carta (en inglés) o por número.',
     ex: ['Spectral Tiger', 'Thrall', 'Illidan'] },
-  duelmasters:{ label: 'Duel Masters', type: 'links',
-    help: 'Duel Masters no está en Cardmarket ni en TCGplayer, así que no hay precios públicos. Escribe el nombre o código y te llevo a buscarlo en tiendas.',
-    ex: ['Bolshack Dragon', 'DM01-S1'] },
+  duelmasters:{ label: 'Duel Masters', type: 'local', yen: true, noSealed: true,
+    help: 'Precios de <b>Japón en yenes (¥)</b>, de Torekakaku. Busca por el <b>nombre en japonés</b> o por el <b>código</b> de abajo de la carta (ej. <b>DM26RP1</b>).',
+    ex: ['ボルメテウス', 'ドギラゴン', 'DM26RP1'] },
 };
 
 let game = 'pokemon';
@@ -249,7 +249,7 @@ function showHelp(){
   const g = GAMES[game];
   $('help').innerHTML = g.help + '<br>Ejemplos: ' + g.ex.map(e => `<span class="ex">${e}</span>`).join('') +
     `<br><button class="gbtn" id="gbtn">📖 Cómo se juega a ${g.label}</button>` +
-    (g.type !== 'links' ? ` <button class="gbtn" id="sbtn">📦 Cajas selladas</button>` : '');
+    (g.type !== 'links' && !g.noSealed ? ` <button class="gbtn" id="sbtn">📦 Cajas selladas</button>` : '');
   $('gbtn').onclick = () => { backStack = []; current = null; showGuide(game); };
   if ($('sbtn')) $('sbtn').onclick = () => { backStack = []; current = null; showSealed(game); };
   $('help').querySelectorAll('.ex').forEach(el => el.onclick = () => { $('q').value = el.textContent; search(); });
@@ -755,14 +755,16 @@ async function loadLocal(key){
   d.byCode = {};
   for (const c of d.cards) {
     c.k = normCode(c.c);              // código completo
-    c.k1 = normCode(String(c.c).split(' ')[0]); // sin la rareza (Digimon: "BT1-084 SR")
+    c.k1 = d.currency === 'JPY' ? '' : normCode(String(c.c).split(' ')[0]); // sin la rareza (Digimon: "BT1-084 SR")
     c.nn = normName(c.n);
     c.b = normName(c.n.replace(/\(.*?\)|\[.*?\]/g, '')).trim(); // nombre sin "(Alternate Art)"…
     for (const k of new Set([c.k, c.k1])) if (k) (d.byCode[k] ||= []).push(c);
   }
   return (localData[key] = d);
 }
-const tcgImg = (c, big) => `https://tcgplayer-cdn.tcgplayer.com/product/${c.id}_${big ? 'in_1000x1000' : '200w'}.jpg`;
+const tcgImg = (c, big) => c.y !== undefined ? `https://torekakaku.com/dm/image/${c.id}.jpg`
+  : `https://tcgplayer-cdn.tcgplayer.com/product/${c.id}_${big ? 'in_1000x1000' : '200w'}.jpg`;
+const yen = v => v ? '¥' + Number(v).toLocaleString('ja-JP') : null;
 // Rareza + tipo de versión sacado del nombre: "SEC · Alt Art", "SEC · Manga", "SR · Parallel"…
 const localRarity = c => {
   const tags = [...String(c.n).matchAll(/[(\[]([^)\]]+)[)\]]/g)].map(m => m[1].trim())
@@ -770,8 +772,8 @@ const localRarity = c => {
     .map(t => t.replace(/Alternate Art/i, 'Alt Art'));
   return [c.r, ...tags].filter(Boolean).join(' · ');
 };
-const localValue = c => c.e || c.u || null;
-const localPrice = c => eur(c.e) || usd(c.u);
+const localValue = c => c.y || c.e || c.u || null;
+const localPrice = c => c.y !== undefined ? yen(c.y) : eur(c.e) || usd(c.u);
 
 async function searchLocal(q){
   loading('Cargando datos del juego…');
@@ -823,6 +825,7 @@ function openLocal(c, versions){
 
 function localView(key, c){
   const d = localData[key], g = GAMES[key], set = d.sets[c.g] || {};
+  if (g.yen) return dmView(key, c, d, set);
   const rows = [['#Cardmarket (Europa)'],
     ['Tendencia', eur(c.e)], ['Desde', eur(c.el)], ['Media 30 días', eur(c.e30)], ['Foil (tendencia)', eur(c.ef)],
     ['#TCGplayer (EE. UU.)'], ['Precio de mercado', usd(c.u)], ['Desde', usd(c.ul)], ['Foil', usd(c.uf)]];
@@ -844,6 +847,29 @@ function localView(key, c){
       const list = d.cards.filter(x => x.g === c.g)
         .sort((a, b) => String(a.c).localeCompare(String(b.c), 'en', { numeric: true }));
       gridLocal(`${esc(set.n || 'Expansión')} · ${list.length} cartas`, list, { sort: true });
+    },
+  };
+}
+
+// Duel Masters: precios de Japón en yenes (Torekakaku)
+function dmView(key, c, d, set){
+  const q = encodeURIComponent(c.n);
+  return {
+    img: tcgImg(c, true), name: c.n, rarity: c.r,
+    versionLabel: [c.r, c.c].filter(Boolean).join(' · '),
+    meta: `${esc(set.n || '')}${c.c ? ' · ' + esc(c.c) : ''}`,
+    mainLabel: 'Precio de venta en Japón (Torekakaku)',
+    mainValue: yen(c.y), value: null,
+    rows: [['#Torekakaku (Japón)'], ['Precio de venta', yen(c.y)]],
+    links: [['Torekakaku', `https://torekakaku.com/dm/card/?cardid=${c.id}`],
+            ['Yuyu-tei', `https://yuyu-tei.jp/sell/dm/s/search?search_word=${q}`],
+            ['eBay', `https://www.ebay.es/sch/i.html?_nkw=${encodeURIComponent('duel masters ' + c.n)}`],
+            ['Ficha oficial', 'https://dm.takaratomy.co.jp/card/']],
+    howto: async () => '<p>El texto oficial de esta carta (en japonés) está en la <a href="https://dm.takaratomy.co.jp/card/" target="_blank" rel="noopener">base de datos de Takara Tomy ↗</a>. Para aprender a jugar, pulsa arriba en <b>📖 Cómo se juega a Duel Masters</b>.</p>',
+    updated: 'Torekakaku del ' + fecha(d.updated),
+    openSet: () => {
+      const list = d.cards.filter(x => x.g === c.g).sort((a, b) => String(a.c).localeCompare(String(b.c), 'ja', { numeric: true }));
+      gridLocal(`${esc(set.n || 'Pack')} · ${list.length} cartas`, list, { sort: true });
     },
   };
 }
