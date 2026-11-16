@@ -18,7 +18,45 @@
   .wrap{max-width:900px;margin:0 auto;padding:28px 16px 60px}
   h1{font-size:30px;margin:0 0 4px;text-align:center}
   .sub{color:var(--muted);text-align:center;margin:0 0 20px}
-  .langbar{position:relative;display:flex;justify-content:flex-end;margin:-12px 0 6px}
+  .langbar{position:relative;display:flex;justify-content:flex-end;gap:8px;margin:-12px 0 6px}
+  /* cuenta de usuario (cuenta.js) */
+  .acct{position:relative}
+  .acct .lsel{display:flex;align-items:center;gap:6px}
+  .acct .lsel img{width:22px;height:22px;border-radius:50%}
+  .acct .lmenu{min-width:220px}
+  .acct .who{font-size:13px;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--line);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis}
+  .login{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+  .login[hidden]{display:none}
+  .lbox{position:relative;background:var(--card);color:var(--text);border-radius:16px;padding:22px;width:min(380px,100%);display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+  .lbox h2{margin:0 0 4px;font-size:20px;text-align:center}
+  .lbox input{font-size:16px;padding:11px 13px}
+  .lbox .gbtn{margin:0;width:100%}
+  .lbox .google{background:#fff;color:#1f1f1f;border:1px solid #dadce0}
+  .lrow{display:flex;gap:8px}
+  .lor{text-align:center;color:var(--muted);font-size:13px;margin:4px 0 0}
+  .lclose{position:absolute;top:8px;right:10px;border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer}
+  .link{border:0;background:none;color:var(--accent);cursor:pointer;padding:0;font-size:14px;text-align:left}
+  .lmsg{margin:0;font-size:14px;min-height:1em}
+  .lmsg.err{color:var(--bad)} .lmsg.ok{color:var(--good)}
+  .gbtn.sec{background:var(--accent-soft);color:var(--accent)}
+  .gbtn.sec.on{background:#f59e0b;color:#fff}
+  .mine{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+  .mine .gbtn{margin:0}
+  .qty{display:inline-flex;align-items:center;gap:8px;background:var(--accent-soft);border-radius:10px;padding:5px 8px;font-weight:600}
+  .qty button,.mq button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;font-size:16px}
+  .mbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+  .mbar select{font-size:14px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+  .mtabs{margin-bottom:6px}
+  .mg{margin:18px 0 6px;font-size:18px} .mg small{color:var(--muted);font-weight:500;font-size:14px}
+  .mset{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:8px}
+  .mset summary{cursor:pointer;font-weight:600} .mset summary small{color:var(--muted);font-weight:500}
+  .mrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+  .mrow:first-of-type{border-top:0}
+  .mrow img,.mrow .noimg{width:48px;aspect-ratio:63/88;object-fit:cover;border-radius:4px;background:var(--line);flex:none;display:grid;place-items:center}
+  .mrow .mi{flex:1;min-width:0}
+  .mrow .mopen{font-weight:600;font-size:15px}
+  .mq{display:flex;align-items:center;gap:6px;flex:none}
+  .mq .mfav.on{color:#f59e0b}
   .lsel{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer}
   .lmenu{position:absolute;top:calc(100% + 4px);right:0;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:6px;display:none;min-width:180px}
   .lmenu.open{display:block}
@@ -196,8 +234,8 @@
   <footer data-t="Precios: Cardmarket (guía de precios pública) · TCGplayer · tcgdex.net · ygoprodeck.com · scryfall.com · Torekakaku — orientativos."></footer>
 </div>
 
-<script src="i18n-keys.js?v=12"></script>
-<script src="i18n.js?v=12"></script>
+<script src="i18n-keys.js?v=13"></script>
+<script src="i18n.js?v=13"></script>
 <script src="guias.js?v=5"></script>
 <script src="como-se-usa.js?v=5"></script>
 <script>
@@ -454,6 +492,7 @@ function render(v){
           ${v.approx ? `<div class="approx">${T(v.approx)}</div>` : ''}
           <div class="upd">${v.updated ? esc(v.updated) + ' · ' : ''}${T('consultado a las {0}', new Date().toLocaleTimeString(LOCALE(), {hour:'2-digit', minute:'2-digit'}))}
             ${v.reload ? `<button class="refresh" id="refresh">${T('🔄 Actualizar precio')}</button>` : ''}</div></div>
+        <div class="mine" id="mine"></div>
         <table>${tr || `<tr><td>${T('No hay más precios disponibles')}</td><td></td></tr>`}</table>
         <div class="links">
           ${v.openSet ? `<button class="main" id="openSet">${T('📚 Ver la expansión entera')}</button>` : ''}
@@ -481,6 +520,7 @@ function render(v){
   if (n > 1) { $('prev').onclick = () => go(-1); $('next').onclick = () => go(1); }
   slideDir = 0;
   drawPicker();
+  if (window.cuentaCard) window.cuentaCard(v); // botones "Mi colección" / "Favorito" (cuenta.js)
   preloadNeighbours();
   if (v.reload) $('refresh').onclick = async () => {
     $('refresh').textContent = T('Actualizando…');
@@ -1446,5 +1486,7 @@ document.querySelectorAll('#lmenu button').forEach(b => b.onclick = () => {
 applyLang();
 if (LANG !== 'es') loadLang(LANG).then(() => { applyLang(); if (redraw) redraw(); });
 </script>
+<!-- Cuentas de usuario: Mi colección y Favoritos (Firebase) -->
+<script type="module" src="cuenta.js?v=1"></script>
 </body>
 </html>
