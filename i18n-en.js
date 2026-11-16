@@ -234,4 +234,5 @@ TRANS.en = {
 342: 'Attacking your opponent directly when they have no Shields left, or if they run out of deck.',
 343: 'English', 344: 'Spanish', 345: 'Italian', 346: 'French', 347: 'Dutch', 348: 'German', 349: 'Japanese', 350: 'Chinese', 351: 'Korean',
 352: 'Swipe to see all versions ({0})',
+353: "⚠️ No photo of this official printing: the image is for reference only (YGOPRODeck replica, “Not For Use in Sanctioned Tournaments”).", 354: "Photo (Yugipedia)",
 };

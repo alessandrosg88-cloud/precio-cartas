@@ -234,4 +234,5 @@ TRANS.nl = {
 342: 'Door de tegenstander direct aan te vallen als hij geen Schilden meer heeft, of als zijn deck op is.',
 343: 'Engels', 344: 'Spaans', 345: 'Italiaans', 346: 'Frans', 347: 'Nederlands', 348: 'Duits', 349: 'Japans', 350: 'Chinees', 351: 'Koreaans',
 352: 'Veeg om alle versies te zien ({0})',
+353: "⚠️ Geen foto van deze officiële druk: de afbeelding is alleen ter referentie (YGOPRODeck-replica, „Not For Use in Sanctioned Tournaments”).", 354: "Foto (Yugipedia)",
 };

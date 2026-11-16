@@ -351,5 +351,7 @@ const ES_KEYS = [
 "japonés",
 "chino",
 "coreano",
-"Desliza para ver todas las versiones ({0})"
+"Desliza para ver todas las versiones ({0})",
+"⚠️ No hay foto de esta impresión oficial: la imagen es solo de referencia (réplica de YGOPRODeck, «Not For Use in Sanctioned Tournaments»).",
+"Foto (Yugipedia)"
 ];

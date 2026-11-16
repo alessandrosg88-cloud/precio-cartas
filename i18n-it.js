@@ -234,4 +234,5 @@ TRANS.it = {
 342: 'Attaccando direttamente l’avversario quando non ha più Scudi, o se resta senza mazzo.',
 343: 'inglese', 344: 'spagnolo', 345: 'italiano', 346: 'francese', 347: 'olandese', 348: 'tedesco', 349: 'giapponese', 350: 'cinese', 351: 'coreano',
 352: 'Scorri per vedere tutte le versioni ({0})',
+353: "⚠️ Nessuna foto di questa stampa ufficiale: l’immagine è solo indicativa (replica di YGOPRODeck, «Not For Use in Sanctioned Tournaments»).", 354: "Foto (Yugipedia)",
 };
