@@ -195,7 +195,8 @@ function matchCardmarket(tcg, cm){
 // Los nombres no son iguales ("Booster Box" vs "Booster Display"), así que comparamos las palabras
 // importantes (la expansión) dentro del mismo tipo de producto y nos quedamos con el más parecido.
 const STOP = new Set(['booster','box','display','pack','packs','case','the','of','and','english','en','tcg','card','game','set',
-  'pokemon','yu','gi','oh','magic','gathering','mtg','sealed','trading','cards','edition','1st','unlimited','a','de']);
+  'pokemon','yu','gi','oh','magic','gathering','mtg','sealed','trading','cards','edition','1st','unlimited','a','de',
+  'disney','lorcana','dragon','ball','super','fusion','world','digimon','gundam','riftbound','league','legends','weiss','schwarz','warcraft','wow','bandai']);
 const words = s => new Set(norm(s.replace(/&/g, ' and ')).split(' ').filter(w => w && !STOP.has(w)));
 function matchSealed(list, cm, sets = {}){
   const cands = cm.nonsingles.filter(p => cmPrice(cm.prices[p.idProduct]))
