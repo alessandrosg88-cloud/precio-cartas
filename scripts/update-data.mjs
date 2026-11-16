@@ -205,7 +205,7 @@ function matchSealed(list, cm, sets = {}){
     .map(p => ({ p, t: sealedType(p.name), w: words(p.name) }));
   const index = {};
   for (const c of cands) for (const w of c.w) (index[c.t + '|' + w] ||= []).push(c);
-  let n = 0;
+  let n = 0; const usedBy = {};
   for (const s of list) {
     let w = words(s.n);
     if (w.size < 2) w = words(s.n + ' ' + (sets[s.g]?.n || '')); // "Booster Pack" -> añade el nombre de la expansión
@@ -217,9 +217,14 @@ function matchSealed(list, cm, sets = {}){
       const score = inter / (w.size + c.w.size - inter);
       if (score > bestScore) { bestScore = score; best = c; }
     }
-    if (!best || bestScore < 0.6) continue;
+    if (!best || bestScore < 0.75) continue;
     const pg = cm.prices[best.p.idProduct], e = cmPrice(pg);
     if (s.u && Math.max(e, s.u) > 5 && (e / s.u > 2.5 || e / s.u < 0.4)) continue; // precio muy distinto: dudoso
+    // cada producto de Cardmarket solo se usa una vez: para el que más se parece
+    const prev = usedBy[best.p.idProduct];
+    if (prev && prev.score >= bestScore) continue;
+    if (prev) { delete prev.s.cm; delete prev.s.e; delete prev.s.el; delete prev.s.e30; n--; }
+    usedBy[best.p.idProduct] = { s, score: bestScore };
     s.cm = best.p.idProduct; s.e = r2(e); s.el = r2(pg.low); s.e30 = r2(pg.avg30); n++;
   }
   const ej = list.filter(s => s.t === 'box').slice(0, 3).map(s => s.n).join(' | ');
