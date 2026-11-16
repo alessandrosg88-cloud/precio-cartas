@@ -353,5 +353,11 @@ const ES_KEYS = [
 "coreano",
 "Desliza para ver todas las versiones ({0})",
 "⚠️ No hay foto de esta impresión oficial: la imagen es solo de referencia (réplica de YGOPRODeck, «Not For Use in Sanctioned Tournaments»).",
-"Foto (Yugipedia)"
+"Foto (Yugipedia)",
+"Con este código se imprimieron varias versiones. Toca la tuya:",
+"1ª edición",
+"Edición ilimitada",
+"Edición limitada",
+"Reimpresión",
+"25 aniversario"
 ];

@@ -235,4 +235,5 @@ TRANS.fr = {
 343: 'anglais', 344: 'espagnol', 345: 'italien', 346: 'français', 347: 'néerlandais', 348: 'allemand', 349: 'japonais', 350: 'chinois', 351: 'coréen',
 352: 'Faites défiler pour voir toutes les versions ({0})',
 353: "⚠️ Pas de photo de cette impression officielle : l’image est donnée à titre indicatif (réplique YGOPRODeck, « Not For Use in Sanctioned Tournaments »).", 354: "Photo (Yugipedia)",
+355: "Plusieurs versions ont été imprimées sous ce code. Touchez la vôtre :", 356: "1re édition", 357: "Édition illimitée", 358: "Édition limitée", 359: "Réimpression", 360: "25e anniversaire",
 };

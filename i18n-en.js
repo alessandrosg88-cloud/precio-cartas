@@ -235,4 +235,5 @@ TRANS.en = {
 343: 'English', 344: 'Spanish', 345: 'Italian', 346: 'French', 347: 'Dutch', 348: 'German', 349: 'Japanese', 350: 'Chinese', 351: 'Korean',
 352: 'Swipe to see all versions ({0})',
 353: "⚠️ No photo of this official printing: the image is for reference only (YGOPRODeck replica, “Not For Use in Sanctioned Tournaments”).", 354: "Photo (Yugipedia)",
+355: "Several versions were printed with this code. Tap yours:", 356: "1st Edition", 357: "Unlimited Edition", 358: "Limited Edition", 359: "Reprint", 360: "25th Anniversary",
 };
