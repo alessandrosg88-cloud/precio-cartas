@@ -38,8 +38,8 @@
   .link{border:0;background:none;color:var(--accent);cursor:pointer;padding:0;font-size:14px;text-align:left}
   .lmsg{margin:0;font-size:14px;min-height:1em}
   .lmsg.err{color:var(--bad)} .lmsg.ok{color:var(--good)}
-  .gbtn.sec{background:var(--accent-soft);color:var(--accent)}
-  .gbtn.sec.on{background:#f59e0b;color:#fff}
+  .gbtn.soft{background:var(--accent-soft);color:var(--accent)}
+  .gbtn.soft.on{background:#f59e0b;color:#fff}
   .mine{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
   .mine .gbtn{margin:0}
   .qty{display:inline-flex;align-items:center;gap:8px;background:var(--accent-soft);border-radius:10px;padding:5px 8px;font-weight:600}
@@ -1487,6 +1487,6 @@ applyLang();
 if (LANG !== 'es') loadLang(LANG).then(() => { applyLang(); if (redraw) redraw(); });
 </script>
 <!-- Cuentas de usuario: Mi colección y Favoritos (Firebase) -->
-<script type="module" src="cuenta.js?v=1"></script>
+<script type="module" src="cuenta.js?v=2"></script>
 </body>
 </html>

@@ -61,7 +61,7 @@ document.body.insertAdjacentHTML('beforeend', `<div class="login" id="login" hid
   <p class="lor" id="lor"></p>
   <input id="lemail" type="email" autocomplete="email">
   <input id="lpass" type="password" autocomplete="current-password">
-  <div class="lrow"><button class="gbtn" id="lin"></button><button class="gbtn sec" id="lnew"></button></div>
+  <div class="lrow"><button class="gbtn" id="lin"></button><button class="gbtn soft" id="lnew"></button></div>
   <button class="link" id="lforgot"></button>
   <p class="lmsg" id="lmsg"></p>
 </div></div>`);
@@ -148,7 +148,7 @@ function drawMine(){
   box.innerHTML = `${qty
       ? `<span class="qty"><span>${T('En tu colección: {0}', '')}</span><button data-q="-1" aria-label="−">−</button><b>${qty}</b><button data-q="1" aria-label="+">+</button></span>`
       : `<button class="gbtn" data-q="1">${T('➕ Añadir a mi colección')}</button>`}
-    <button class="gbtn sec${it?.fav ? ' on' : ''}" data-f="1">${it?.fav ? T('★ En favoritos') : T('☆ Añadir a favoritos')}</button>`;
+    <button class="gbtn soft${it?.fav ? ' on' : ''}" data-f="1">${it?.fav ? T('★ En favoritos') : T('☆ Añadir a favoritos')}</button>`;
   box.querySelectorAll('[data-q]').forEach(b => b.onclick = () => {
     if (!user) return openLogin(T('Entra para guardar cartas en tu colección.'));
     save(lastCard, { qty: Math.max(0, qty + Number(b.dataset.q)) });
