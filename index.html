@@ -733,7 +733,10 @@ function pickScan(scans, code, rarity){
   }
   return best;
 }
-const ygpThumb = u => { const m = u?.match(/^(https:\/\/img\.yugipedia\.com\/)(.+\/)([^/]+)$/); return m ? `${m[1]}thumb/${m[2]}${m[3]}/250px-${m[3]}` : u; };
+const ygpThumb = u => { const m = u?.match(/^(https:\/\/img\.yugipedia\.com\/)(.+\/)([^/]+)$/); return m ? `${m[1]}thumb/${m[2]}${m[3]}/200px-${m[3]}` : u; };
+// si falla la miniatura de Yugipedia, usa la imagen original
+document.addEventListener('error', e => { const im = e.target;
+  if (im?.tagName === 'IMG' && /img\.yugipedia\.com\/thumb\//.test(im.src)) im.src = im.src.replace('/thumb/', '/').replace(/\/[^/]+$/, ''); }, true);
 const withTimeout = (p, ms) => Promise.race([p, new Promise(ok => setTimeout(() => ok(null), ms))]);
 async function ygoRealImg(c, code, rarity, small){
   const prefix = code ? String(code).toUpperCase().split('-')[0] : null;
