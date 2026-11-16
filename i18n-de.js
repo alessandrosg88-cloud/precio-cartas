@@ -77,7 +77,7 @@ TRANS.de = {
 132: 'Keine Textinformationen zu dieser Karte. Sieh dir oben die Anleitung „So spielt man“ an.',
 133: 'Das ist eine Zusammenfassung für den Einstieg. Karten können die Regeln ändern: Was auf der Karte steht, gilt.',
 134: 'Nutze den <b>Set-Code + Nummer</b> unten auf der Karte (z. B. <b>OBF 125</b>), nur die Nummer (<b>125/197</b>) oder den englischen Namen.',
-135: 'Nutze den <b>aufgedruckten Code</b> unter dem Bild (z. B. <b>LOB-EN001</b>). Auch auf Deutsch (<b>LOB-DE001</b>) oder den englischen Namen.',
+135: "Nutze den <b>aufgedruckten Code</b> unter dem Bild (z. B. <b>LOB-EN001</b>), auch auf Deutsch, Französisch, Italienisch, Portugiesisch oder Spanisch (<b>LOB-DE001</b>, <b>LOB-SP001</b>…), oder den Kartennamen in einer dieser Sprachen oder auf Englisch.",
 136: 'Nutze den <b>Set-Code + Nummer</b> unten links (z. B. <b>MH3 123</b>) oder den englischen Namen.',
 137: 'Nutze den <b>Code</b> unten rechts (z. B. <b>OP01-120</b>) oder den englischen Namen.',
 138: 'Fusion World und Masters. Nutze den <b>Code</b> (z. B. <b>FB01-001</b>, <b>BT1-031</b>) oder den englischen Namen.',
@@ -238,4 +238,5 @@ TRANS.de = {
 355: "Unter diesem Code wurden mehrere Versionen gedruckt. Tippe auf deine:", 356: "1. Auflage", 357: "Unlimitiert", 358: "Limitierte Auflage", 359: "Neuauflage", 360: "25. Jubiläum",
 361: "TCGplayer vom {0}", 362: "ab",
 363: "Dieser Druck", 364: "Richtpreis dieses Drucks", 365: "TCGplayer verkauft diesen Druck nicht; Daten von YGOPRODeck, evtl. veraltet.", 366: "TCGplayer hat derzeit keinen Preis für diesen Druck.",
+367: "Karte nicht gefunden. Versuche den Code oder den Namen auf Englisch, Deutsch, Französisch, Italienisch, Portugiesisch oder Spanisch.", 368: "Deine Karte", 369: "TCGplayer verkauft nur englische Karten: Der Preis gilt für {0}. Für deine Sprache schau bei Cardmarket.", 370: "Name in anderen Sprachen", 371: "Portugiesisch",
 };

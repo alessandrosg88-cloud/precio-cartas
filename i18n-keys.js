@@ -134,7 +134,7 @@ const ES_KEYS = [
 "No hay información del texto de esta carta. Mira la guía \"Cómo se juega\" de arriba.",
 "Es un resumen para empezar. Cada carta puede cambiar las reglas: lo que dice la carta manda.",
 "Usa el <b>código del set + número</b> de abajo de la carta (ej. <b>OBF 125</b>), solo el número (<b>125/197</b>) o el nombre en inglés.",
-"Usa el <b>código impreso</b> debajo de la imagen (ej. <b>LOB-EN001</b>). También en español (<b>LOB-SP001</b>) o el nombre en inglés.",
+"Usa el <b>código impreso</b> debajo de la imagen (ej. <b>LOB-EN001</b>), también en alemán, francés, italiano, portugués o español (<b>LOB-DE001</b>, <b>LOB-SP001</b>…), o el nombre de la carta en cualquiera de esos idiomas o en inglés.",
 "Usa el <b>código del set + número</b> de abajo a la izquierda (ej. <b>MH3 123</b>) o el nombre en inglés.",
 "Usa el <b>código</b> de abajo a la derecha (ej. <b>OP01-120</b>) o el nombre en inglés.",
 "Fusion World y Masters. Usa el <b>código</b> (ej. <b>FB01-001</b>, <b>BT1-031</b>) o el nombre en inglés.",
@@ -365,5 +365,10 @@ const ES_KEYS = [
 "Esta edición",
 "Precio orientativo de esta edición",
 "TCGplayer no vende esta impresión; dato de YGOPRODeck, puede estar desactualizado.",
-"TCGplayer no tiene precio de esta impresión ahora mismo."
+"TCGplayer no tiene precio de esta impresión ahora mismo.",
+"No encontré esa carta. Prueba con el código o con su nombre en inglés, alemán, francés, italiano, portugués o español.",
+"Tu carta",
+"TCGplayer solo vende cartas en inglés: el precio es el de {0}. Para tu idioma, mira Cardmarket.",
+"Nombre en otros idiomas",
+"portugués"
 ];

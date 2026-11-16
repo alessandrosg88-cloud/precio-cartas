@@ -77,7 +77,7 @@ TRANS.nl = {
 132: 'Geen tekstinformatie voor deze kaart. Bekijk de gids "Zo speel je" hierboven.',
 133: 'Dit is een samenvatting om te beginnen. Kaarten kunnen de regels veranderen: wat op de kaart staat, gaat voor.',
 134: 'Gebruik de <b>setcode + nummer</b> onderaan de kaart (bijv. <b>OBF 125</b>), alleen het nummer (<b>125/197</b>) of de Engelse naam.',
-135: 'Gebruik de <b>gedrukte code</b> onder de afbeelding (bijv. <b>LOB-EN001</b>). Ook in het Spaans (<b>LOB-SP001</b>) of de Engelse naam.',
+135: "Gebruik de <b>gedrukte code</b> onder de afbeelding (bv. <b>LOB-EN001</b>), ook in het Duits, Frans, Italiaans, Portugees of Spaans (<b>LOB-DE001</b>, <b>LOB-SP001</b>…), of de kaartnaam in een van die talen of in het Engels.",
 136: 'Gebruik de <b>setcode + nummer</b> linksonder (bijv. <b>MH3 123</b>) of de Engelse naam.',
 137: 'Gebruik de <b>code</b> rechtsonder (bijv. <b>OP01-120</b>) of de Engelse naam.',
 138: 'Fusion World en Masters. Gebruik de <b>code</b> (bijv. <b>FB01-001</b>, <b>BT1-031</b>) of de Engelse naam.',
@@ -238,4 +238,5 @@ TRANS.nl = {
 355: "Met deze code zijn meerdere versies gedrukt. Tik op de jouwe:", 356: "1e editie", 357: "Onbeperkte editie", 358: "Gelimiteerde editie", 359: "Herdruk", 360: "25e jubileum",
 361: "TCGplayer van {0}", 362: "vanaf",
 363: "Deze druk", 364: "Richtprijs van deze druk", 365: "TCGplayer verkoopt deze druk niet; gegevens van YGOPRODeck, mogelijk verouderd.", 366: "TCGplayer heeft nu geen prijs voor deze druk.",
+367: "Kaart niet gevonden. Probeer de code of de naam in het Engels, Duits, Frans, Italiaans, Portugees of Spaans.", 368: "Jouw kaart", 369: "TCGplayer verkoopt alleen Engelse kaarten: de prijs is die van {0}. Kijk voor jouw taal op Cardmarket.", 370: "Naam in andere talen", 371: "Portugees",
 };

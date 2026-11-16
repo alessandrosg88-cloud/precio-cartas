@@ -77,7 +77,7 @@ TRANS.it = {
 132: 'Nessuna informazione sul testo di questa carta. Guarda la guida "Come si gioca" qui sopra.',
 133: 'È un riassunto per iniziare. Ogni carta può cambiare le regole: vale quello che dice la carta.',
 134: 'Usa il <b>codice del set + numero</b> in basso sulla carta (es. <b>OBF 125</b>), solo il numero (<b>125/197</b>) o il nome in inglese.',
-135: 'Usa il <b>codice stampato</b> sotto l’immagine (es. <b>LOB-EN001</b>). Anche in italiano (<b>LOB-IT001</b>) o il nome in inglese.',
+135: "Usa il <b>codice stampato</b> sotto l’immagine (es. <b>LOB-EN001</b>), anche in tedesco, francese, italiano, portoghese o spagnolo (<b>LOB-IT001</b>, <b>LOB-SP001</b>…), o il nome della carta in una di queste lingue o in inglese.",
 136: 'Usa il <b>codice del set + numero</b> in basso a sinistra (es. <b>MH3 123</b>) o il nome in inglese.',
 137: 'Usa il <b>codice</b> in basso a destra (es. <b>OP01-120</b>) o il nome in inglese.',
 138: 'Fusion World e Masters. Usa il <b>codice</b> (es. <b>FB01-001</b>, <b>BT1-031</b>) o il nome in inglese.',
@@ -238,4 +238,5 @@ TRANS.it = {
 355: "Con questo codice sono state stampate più versioni. Tocca la tua:", 356: "1ª edizione", 357: "Edizione illimitata", 358: "Edizione limitata", 359: "Ristampa", 360: "25° anniversario",
 361: "TCGplayer del {0}", 362: "da",
 363: "Questa stampa", 364: "Prezzo indicativo di questa stampa", 365: "TCGplayer non vende questa stampa; dato di YGOPRODeck, potrebbe non essere aggiornato.", 366: "TCGplayer non ha un prezzo per questa stampa al momento.",
+367: "Carta non trovata. Prova con il codice o con il nome in inglese, tedesco, francese, italiano, portoghese o spagnolo.", 368: "La tua carta", 369: "TCGplayer vende solo carte in inglese: il prezzo è quello di {0}. Per la tua lingua, guarda Cardmarket.", 370: "Nome in altre lingue", 371: "portoghese",
 };

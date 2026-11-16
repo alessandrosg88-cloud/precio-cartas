@@ -196,8 +196,8 @@
   <footer data-t="Precios: Cardmarket (guía de precios pública) · TCGplayer · tcgdex.net · ygoprodeck.com · scryfall.com · Torekakaku — orientativos."></footer>
 </div>
 
-<script src="i18n-keys.js?v=10"></script>
-<script src="i18n.js?v=10"></script>
+<script src="i18n-keys.js?v=11"></script>
+<script src="i18n.js?v=11"></script>
 <script src="guias.js?v=5"></script>
 <script src="como-se-usa.js?v=5"></script>
 <script>
@@ -212,8 +212,8 @@ const GAMES = {
     help: 'Usa el <b>código del set + número</b> de abajo de la carta (ej. <b>OBF 125</b>), solo el número (<b>125/197</b>) o el nombre en inglés.',
     ex: ['OBF 125', '125/197', 'base1-4', 'Pikachu'] },
   yugioh:    { label: 'Yu-Gi-Oh!', type: 'api', cm: 'YuGiOh',
-    help: 'Usa el <b>código impreso</b> debajo de la imagen (ej. <b>LOB-EN001</b>). También en español (<b>LOB-SP001</b>) o el nombre en inglés.',
-    ex: ['LOB-EN001', 'SDY-006', 'Dark Magician'] },
+    help: 'Usa el <b>código impreso</b> debajo de la imagen (ej. <b>LOB-EN001</b>), también en alemán, francés, italiano, portugués o español (<b>LOB-DE001</b>, <b>LOB-SP001</b>…), o el nombre de la carta en cualquiera de esos idiomas o en inglés.',
+    ex: ['LOB-EN001', 'LOB-DE001', 'Dark Magician', 'Dragón Blanco de Ojos Azules'] },
   magic:     { label: 'Magic', type: 'api', cm: 'Magic',
     help: 'Usa el <b>código del set + número</b> de abajo a la izquierda (ej. <b>MH3 123</b>) o el nombre en inglés.',
     ex: ['MH3 123', 'LEA 232', 'Lightning Bolt'] },
@@ -446,6 +446,7 @@ function render(v){
       </div>
       <div>
         <p class="name">${esc(v.name)}</p>
+        ${v.subname ? `<p class="meta">${esc(v.subname)}</p>` : ''}
         <p class="meta">${v.meta}</p>
         ${v.rarity ? `<span class="rar">✦ ${esc(v.rarity)}</span>` : ''}
         <div class="picker" id="vpick"></div>
@@ -772,27 +773,68 @@ async function ygoRealImg(c, code, rarity, small){
   const s = pickScan(await ygpScans(c.name, prefix), code, rarity);
   return s ? (small ? ygpThumb(s.url) : s.url) : null;
 }
+// Idioma según el código impreso: LOB-DE001 / LOB-G001 (alemán), -FR/-F, -IT/-I, -PT/-P, -SP/-S
+const CODE_LANG = { DE: 'de', G: 'de', FR: 'fr', F: 'fr', IT: 'it', I: 'it', PT: 'pt', P: 'pt', SP: 'es', S: 'es' };
+const YLANGS = { de: ['German', 'alemán', '🇩🇪'], fr: ['French', 'francés', '🇫🇷'], it: ['Italian', 'italiano', '🇮🇹'], pt: ['Portuguese', 'portugués', '🇵🇹'], es: ['Spanish', 'español', '🇪🇸'] };
+const YGP_ASK = 'https://yugipedia.com/api.php?action=ask&format=json&origin=*&query=';
+// Nombre de la carta en alemán, francés, italiano, portugués y español (Yugipedia)
+const locNameCache = {};
+function ygoLocalNames(enName){
+  return locNameCache[enName] ||= getJSON(YGP_ASK + encodeURIComponent(`[[${enName.replace(/[[\]|]/g, '')}]]` + Object.values(YLANGS).map(l => `|?${l[0]} name`).join('')))
+    .then(r => { const pr = Object.values(r?.query?.results || {})[0]?.printouts || {};
+      return Object.fromEntries(Object.entries(YLANGS).map(([k, l]) => [k, pr[`${l[0]} name`]?.[0] || null])); })
+    .catch(() => (delete locNameCache[enName], null));
+}
+// Busca por nombre en alemán, francés, italiano y portugués (YGOPRODeck) y en español (Yugipedia).
+// Devuelve las cartas en inglés + el nombre que coincidió: { cards, hit: { id: { lang, name } } }
+async function searchYugiohLocal(q){
+  const hit = {};
+  const viaYgo = ['de', 'fr', 'it', 'pt'].map(l => getJSON(`${YGO}/cardinfo.php?fname=${encodeURIComponent(q)}&language=${l}`).catch(() => null)
+    .then(r => (r?.data || []).forEach(c => { hit[c.id] ||= { lang: l, name: c.name }; })));
+  // Yugipedia distingue mayúsculas: probamos cada palabra tal cual, en minúscula y con mayúscula inicial
+  const words = q.trim().split(/\s+/).filter(w => w.length > 1).slice(0, 6);
+  const cond = l => words.map(w => { const v = [...new Set([w, w.toLowerCase(), w[0].toUpperCase() + w.slice(1).toLowerCase()])];
+    return `[[${l} name::${v.map(x => `~*${x.replace(/[[\]|]/g, '')}*`).join('||')}]]`; }).join('');
+  const viaYgp = getJSON(YGP_ASK + encodeURIComponent(Object.entries(YLANGS).map(([, l]) => `[[Category:TCG cards]]${cond(l[0])}`).join(' OR ')
+      + '|?Password' + Object.values(YLANGS).map(l => `|?${l[0]} name`).join('') + '|limit=60')).catch(() => null)
+    .then(r => Object.values(r?.query?.results || {}).forEach(x => {
+      const id = Number(x.printouts.Password?.[0]); if (!id || hit[id]) return;
+      const ql = q.toLowerCase();
+      const [lang] = Object.entries(YLANGS).find(([, l]) => String(x.printouts[`${l[0]} name`]?.[0] || '').toLowerCase().includes(words[0]?.toLowerCase() || ql)) || ['es'];
+      hit[id] = { lang, name: x.printouts[`${YLANGS[lang][0]} name`]?.[0] || '' };
+    }));
+  await Promise.all([...viaYgo, viaYgp]);
+  const ids = Object.keys(hit).slice(0, 80);
+  if (!ids.length) return { cards: [], hit };
+  const r = await getJSON(`${YGO}/cardinfo.php?id=${ids.join(',')}`).catch(() => null);
+  return { cards: r?.data || [], hit };
+}
+
 async function searchYugioh(q){
   const m = q.toUpperCase().replace(/\s+/g, '').match(/^([A-Z0-9]+)-([A-Z]{0,2})(\d+)$/);
   if (m) {
-    const tries = [q.toUpperCase().replace(/\s+/g, ''), `${m[1]}-EN${m[3]}`, `${m[1]}-${m[3]}`];
+    const typed = q.toUpperCase().replace(/\s+/g, '');
+    const lang = CODE_LANG[m[2]] || null;
+    const tries = [typed, `${m[1]}-EN${m[3]}`, `${m[1]}-${m[3]}`, `${m[1]}-E${m[3]}`];
     for (const code of [...new Set(tries)]) {
       const info = await getJSON(`${YGO}/cardsetsinfo.php?setcode=${encodeURIComponent(code)}`).catch(() => null);
       if (info && info.id) {
         const card = (await getJSON(`${YGO}/cardinfo.php?id=${info.id}`))?.data?.[0];
-        return openYugioh(card, code, info.set_rarity);
+        return openYugioh(card, code, info.set_rarity, lang ? { lang, code: typed } : null);
       }
     }
     return error(T('No encontré ese código. Revisa que esté bien escrito (ej. LOB-EN001).'));
   }
   const r = await getJSON(`${YGO}/cardinfo.php?fname=${encodeURIComponent(q)}`);
-  const cards = r?.data || [];
-  if (!cards.length) return error(T('No encontré esa carta. Prueba con el código o el nombre en inglés.'));
-  if (cards.length === 1) return openYugioh(cards[0]);
+  let cards = r?.data || [], hit = {};
+  if (!cards.length) ({ cards, hit } = await searchYugiohLocal(q)); // no está en inglés: alemán, francés, italiano, portugués o español
+  if (!cards.length) return error(T('No encontré esa carta. Prueba con el código o con su nombre en inglés, alemán, francés, italiano, portugués o español.'));
+  const loc = c => hit[c.id] ? { lang: hit[c.id].lang } : null;
+  if (cards.length === 1) return openYugioh(cards[0], null, null, loc(cards[0]));
   renderGrid(T('{0} resultados', cards.length), cards.slice(0, 80).map(c => ({
-    img: c.card_images?.[0]?.image_url_small, title: c.name,
+    img: c.card_images?.[0]?.image_url_small, title: hit[c.id]?.name || c.name, sub: hit[c.id] ? c.name : '',
     real: () => ygoRealImg(c, c.card_sets?.[0]?.set_code, c.card_sets?.[0]?.set_rarity, true).then(u => u || ygoRealImg(c, null, null, true)),
-    price: eur(c.card_prices?.[0]?.cardmarket_price), open: () => openYugioh(c) })));
+    price: eur(c.card_prices?.[0]?.cardmarket_price), open: () => openYugioh(c, null, null, loc(c)) })));
 }
 
 // ---- Precio de TCGplayer de cada impresión (lo descarga cada día la GitHub Action en data/ygo/) ----
@@ -850,8 +892,10 @@ const printPrice = e => { const v = Object.values(e?.p || {}).map(x => x[0]).fil
 const is25 = e => /25th Anniversary/i.test(e?.g || '');
 const ED_TCG = { '1st Edition': '1ª edición', 'Unlimited': 'Edición ilimitada', 'Limited': 'Edición limitada' };
 
-async function openYugioh(c, code, rarity){
+// local = { lang, code? }: la carta se buscó en otro idioma (código LOB-DE001 o nombre en alemán…)
+async function openYugioh(c, code, rarity, local = null){
   const sets = c.card_sets || [];
+  const names = withTimeout(ygoLocalNames(c.name), 4000);
   // escaneos reales de todas las impresiones de la carta (una sola consulta) + precios por impresión
   const [scans0, pr] = await Promise.all([withTimeout(ygpScans(c.name), 4000), withTimeout(ygoPrints(c.name), 4000)]);
   const scans = scans0 || [];
@@ -862,14 +906,22 @@ async function openYugioh(c, code, rarity){
   const cc = code && normCode(code);
   let idx = cc ? items.findIndex(s => s && normCode(s.set_code) === cc && (!rarity || s.set_rarity === rarity)) : -1;
   if (idx < 0 && cc) idx = items.findIndex(s => s && normCode(s.set_code) === cc);
-  return showVersions(items, idx < 0 ? 0 : idx, async s => yugiohView(c, s, real(s) || (!s && pickScan(scans, null, null)), s ? scanGroup(scans, s.set_code, s.set_rarity) : [], pr),
+  const locNames = await names;
+  // código en el idioma de la carta para la versión buscada (LOB-EN001 -> LOB-DE001)
+  const locCode = s => local?.code && s && normCode(s.set_code) === cc ? local.code : null;
+  const realLoc = s => { const lc = locCode(s); return (lc && pickScan(scans, lc, s.set_rarity)) || real(s); };
+  return showVersions(items, idx < 0 ? 0 : idx, async s => yugiohView(c, s, realLoc(s) || (!s && pickScan(scans, null, null)),
+      s && !locCode(s) ? scanGroup(scans, s.set_code, s.set_rarity) : [], pr, { names: locNames, lang: local?.lang, code: locCode(s) }),
     s => { const x = real(s); const i = x ? ygpThumb(x.url) : c.card_images?.[0]?.image_url_small;
       return s ? { r: s.set_rarity, t: s.set_code, p: s.prints?.length ? usd(versionPrice(s)) : (Number(s.set_price) ? '≈ ' + usd(s.set_price) : ''), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
 }
 
-function yugiohView(c, set, scan, group = [], pr = null){
+function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
   const p = c.card_prices?.[0] || {};
   const rows = [];
+  // idioma a destacar: el de la búsqueda o, si no, el de la web
+  const showLang = loc.lang || (YLANGS[LANG] ? LANG : null);
+  const locName = showLang && loc.names?.[showLang];
   const ps = printsFor(pr, set);
   // con varias impresiones del mismo código, la foto elegida decide cuál es "la tuya"
   const alts = group.length > 1 ? group.map(x => ({ url: x.url, label: scanLabel(x), file: x.file, is25: x.extra.includes('25thAnniversaryEdition') })) : null;
@@ -882,23 +934,28 @@ function yugiohView(c, set, scan, group = [], pr = null){
       rows.push([[set.set_code, ps.length > 1 ? (is25(e) ? T('25 aniversario') : e.g) : '', T(ED_TCG[ed] || ed)].filter(Boolean).join(' · '),
         usd(m || low) + (low && m ? ` <small>(${T('desde')} ${usd(low)})</small>` : '')]);
   } else if (set && Number(set.set_price)) rows.push(['#Esta edición'], [`${set.set_code} (${set.set_rarity}) · YGOPRODeck`, usd(set.set_price)]);
+  if (loc.code) rows.push(['#Tu carta'], [`${loc.code} (${T(YLANGS[loc.lang][1])})`, `<small>${T('TCGplayer solo vende cartas en inglés: el precio es el de {0}. Para tu idioma, mira Cardmarket.', esc(set.set_code))}</small>`]);
+  if (loc.names && Object.values(loc.names).some(Boolean)) {
+    rows.push(['#Nombre en otros idiomas']);
+    for (const [k, l] of Object.entries(YLANGS)) if (loc.names[k]) { const t = T(l[1]); rows.push([`${l[2]} ${t[0].toUpperCase() + t.slice(1)}`, esc(loc.names[k])]); }
+  }
   rows.push(['#Precio general de la carta'],
     ['Cardmarket (la edición más barata)', eur(p.cardmarket_price)], ['TCGplayer', usd(p.tcgplayer_price)],
     ['eBay', usd(p.ebay_price)], ['Amazon', usd(p.amazon_price)], ['CoolStuffInc', usd(p.coolstuffinc_price)]);
   const sp = chosen ? printPrice(chosen) : null;
   const approx = !sp && set && Number(set.set_price) ? Number(set.set_price) : null; // TCGplayer no la vende: dato orientativo
   return {
-    img: scan?.url || c.card_images?.[0]?.image_url, replica: !scan, name: c.name, rarity: set?.set_rarity,
+    img: scan?.url || c.card_images?.[0]?.image_url, replica: !scan, name: locName || c.name, subname: locName && locName !== c.name ? c.name : '', rarity: set?.set_rarity,
     alts,
     updated: pr && ps.length ? T('TCGplayer del {0}', fecha(pr.updated)) : '',
-    versionLabel: set ? `${set.set_code} · ${set.set_rarity}` : '',
-    meta: set ? `${esc(set.set_name)} · ${esc(set.set_code)}` : esc(c.type),
+    versionLabel: set ? `${loc.code || set.set_code} · ${set.set_rarity}` : '',
+    meta: set ? `${esc(set.set_name)} · ${esc(loc.code || set.set_code)}` : esc(c.type),
     mainLabel: sp ? 'Precio de esta edición exacta' : approx ? 'Precio orientativo de esta edición' : set ? 'Precio de esta edición exacta' : 'Precio en Cardmarket (desde)',
     mainValue: sp ? usd(sp) : approx ? usd(approx) : set ? '' : eur(p.cardmarket_price) || usd(p.tcgplayer_price),
     approx: approx ? 'TCGplayer no vende esta impresión; dato de YGOPRODeck, puede estar desactualizado.' : set && !sp ? 'TCGplayer no tiene precio de esta impresión ahora mismo.' : '',
     value: sp || approx || Number(p.cardmarket_price) || null,
     rows,
-    links: [['Cardmarket', `https://www.cardmarket.com/es/YuGiOh/Products/Search?searchString=${encodeURIComponent(c.name)}`],
+    links: [['Cardmarket', `https://www.cardmarket.com/es/YuGiOh/Products/Search?searchString=${encodeURIComponent(c.name)}${loc.lang ? '&language=' + ({ fr: 2, de: 3, es: 4, it: 5, pt: 8 })[loc.lang] : ''}`],
             ['TCGplayer', `https://www.tcgplayer.com/search/yugioh/product?q=${encodeURIComponent(c.name)}`],
             ['Ficha', c.ygoprodeck_url], ['Foto (Yugipedia)', scan ? `https://yugipedia.com/wiki/File:${encodeURIComponent(scan.file)}` : null]],
     reload: async () => { const n = (await getJSON(`${YGO}/cardinfo.php?id=${c.id}`))?.data?.[0]; if (n) { Object.assign(c, n); drawCurrent(); } },

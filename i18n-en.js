@@ -77,7 +77,7 @@ TRANS.en = {
 132: 'No text information for this card. Check the "How to play" guide above.',
 133: 'This is a summary to get started. Cards can change the rules: what the card says comes first.',
 134: 'Use the <b>set code + number</b> at the bottom of the card (e.g. <b>OBF 125</b>), just the number (<b>125/197</b>) or the English name.',
-135: 'Use the <b>printed code</b> below the artwork (e.g. <b>LOB-EN001</b>). Also in Spanish (<b>LOB-SP001</b>) or the English name.',
+135: "Use the <b>code printed</b> under the image (e.g. <b>LOB-EN001</b>), also in German, French, Italian, Portuguese or Spanish (<b>LOB-DE001</b>, <b>LOB-SP001</b>…), or the card name in any of those languages or in English.",
 136: 'Use the <b>set code + number</b> at the bottom left (e.g. <b>MH3 123</b>) or the English name.',
 137: 'Use the <b>code</b> at the bottom right (e.g. <b>OP01-120</b>) or the English name.',
 138: 'Fusion World and Masters. Use the <b>code</b> (e.g. <b>FB01-001</b>, <b>BT1-031</b>) or the English name.',
@@ -238,4 +238,5 @@ TRANS.en = {
 355: "Several versions were printed with this code. Tap yours:", 356: "1st Edition", 357: "Unlimited Edition", 358: "Limited Edition", 359: "Reprint", 360: "25th Anniversary",
 361: "TCGplayer on {0}", 362: "from",
 363: "This printing", 364: "Approximate price of this printing", 365: "TCGplayer does not sell this printing; YGOPRODeck data, may be out of date.", 366: "TCGplayer has no price for this printing right now.",
+367: "Card not found. Try the code or its name in English, German, French, Italian, Portuguese or Spanish.", 368: "Your card", 369: "TCGplayer only sells English cards: the price is for {0}. For your language, check Cardmarket.", 370: "Name in other languages", 371: "Portuguese",
 };
