@@ -237,4 +237,5 @@ TRANS.nl = {
 353: "⚠️ Geen foto van deze officiële druk: de afbeelding is alleen ter referentie (YGOPRODeck-replica, „Not For Use in Sanctioned Tournaments”).", 354: "Foto (Yugipedia)",
 355: "Met deze code zijn meerdere versies gedrukt. Tik op de jouwe:", 356: "1e editie", 357: "Onbeperkte editie", 358: "Gelimiteerde editie", 359: "Herdruk", 360: "25e jubileum",
 361: "TCGplayer van {0}", 362: "vanaf",
+363: "Deze druk", 364: "Richtprijs van deze druk", 365: "TCGplayer verkoopt deze druk niet; gegevens van YGOPRODeck, mogelijk verouderd.", 366: "TCGplayer heeft nu geen prijs voor deze druk.",
 };

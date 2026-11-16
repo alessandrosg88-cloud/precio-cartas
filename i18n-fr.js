@@ -237,4 +237,5 @@ TRANS.fr = {
 353: "⚠️ Pas de photo de cette impression officielle : l’image est donnée à titre indicatif (réplique YGOPRODeck, « Not For Use in Sanctioned Tournaments »).", 354: "Photo (Yugipedia)",
 355: "Plusieurs versions ont été imprimées sous ce code. Touchez la vôtre :", 356: "1re édition", 357: "Édition illimitée", 358: "Édition limitée", 359: "Réimpression", 360: "25e anniversaire",
 361: "TCGplayer du {0}", 362: "dès",
+363: "Cette impression", 364: "Prix indicatif de cette impression", 365: "TCGplayer ne vend pas cette impression ; donnée YGOPRODeck, peut-être obsolète.", 366: "TCGplayer n’a pas de prix pour cette impression en ce moment.",
 };

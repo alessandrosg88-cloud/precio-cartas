@@ -237,4 +237,5 @@ TRANS.en = {
 353: "⚠️ No photo of this official printing: the image is for reference only (YGOPRODeck replica, “Not For Use in Sanctioned Tournaments”).", 354: "Photo (Yugipedia)",
 355: "Several versions were printed with this code. Tap yours:", 356: "1st Edition", 357: "Unlimited Edition", 358: "Limited Edition", 359: "Reprint", 360: "25th Anniversary",
 361: "TCGplayer on {0}", 362: "from",
+363: "This printing", 364: "Approximate price of this printing", 365: "TCGplayer does not sell this printing; YGOPRODeck data, may be out of date.", 366: "TCGplayer has no price for this printing right now.",
 };

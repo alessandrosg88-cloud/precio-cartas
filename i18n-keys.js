@@ -361,5 +361,9 @@ const ES_KEYS = [
 "Reimpresión",
 "25 aniversario",
 "TCGplayer del {0}",
-"desde"
+"desde",
+"Esta edición",
+"Precio orientativo de esta edición",
+"TCGplayer no vende esta impresión; dato de YGOPRODeck, puede estar desactualizado.",
+"TCGplayer no tiene precio de esta impresión ahora mismo."
 ];

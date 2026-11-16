@@ -196,8 +196,8 @@
   <footer data-t="Precios: Cardmarket (guía de precios pública) · TCGplayer · tcgdex.net · ygoprodeck.com · scryfall.com · Torekakaku — orientativos."></footer>
 </div>
 
-<script src="i18n-keys.js?v=9"></script>
-<script src="i18n.js?v=9"></script>
+<script src="i18n-keys.js?v=10"></script>
+<script src="i18n.js?v=10"></script>
 <script src="guias.js?v=5"></script>
 <script src="como-se-usa.js?v=5"></script>
 <script>
@@ -706,7 +706,11 @@ const RAR_ABBR = { 'Common': ['C', 'SP'], 'Short Print': ['SP', 'C'], 'Rare': ['
   'Duel Terminal Normal Parallel Rare': ['DNPR'], 'Duel Terminal Super Parallel Rare': ['DSPR'], 'Duel Terminal Ultra Parallel Rare': ['DUPR'],
   'Duel Terminal Normal Rare Parallel Rare': ['DNRPR'], 'Duel Terminal Rare Parallel Rare': ['DRPR'],
   'Normal Parallel Rare': ['NPR'], 'Super Parallel Rare': ['SPR'], 'Ultra Parallel Rare': ['UPR'], 'Ultra Rare (Pharaoh\'s Rare)': ['URPR'],
-  '10000 Secret Rare': ['10000ScR'], 'Ghost Secret Rare': ['GScR'] };
+  '10000 Secret Rare': ['10000ScR'], 'Ghost Secret Rare': ['GScR'],
+  // nombres que usa TCGplayer
+  "Prismatic Collector's Rare": ['PCR', 'CR'], 'Prismatic Ultimate Rare': ['PUR', 'UtR'], 'Starfoil Rare': ['SFR'], 'Starfoil': ['SFR'],
+  'Parallel Rare': ['NPR', 'SPR', 'UPR', 'PR'], 'Duel Terminal Technology Common': ['DNPR', 'C'], 'Duel Terminal Technology Ultra Rare': ['DUPR', 'UR'],
+  'Duel Terminal Rare Parallel Rare': ['DRPR'], 'Duel Terminal Super Parallel Rare': ['DSPR'], 'Duel Terminal Ultra Parallel Rare': ['DUPR'] };
 const scanCache = {};
 async function ygpScans(name, setPrefix){
   const pre = ygpKey(name) + '-' + (setPrefix ? setPrefix + '-' : '');
@@ -803,8 +807,39 @@ async function ygoPrints(name){
   const f = await (printCache[k] ||= fetch(`data/ygo/${k}.json`).then(r => r.ok ? r.json() : null).catch(() => null));
   return f ? { updated: f.updated, list: f.d[ygoNorm(name)] || [] } : null;
 }
+// Lista de versiones de una carta. TCGplayer manda: YGOPRODeck tiene rarezas mal puestas en algunas
+// impresiones ("New", "2", "Reprint", Common donde es Ultra Rare…) y le faltan rarezas (p. ej. los 7 de
+// las Rarity Collection). Para cada código usamos las rarezas reales de TCGplayer con su precio;
+// solo si TCGplayer no tiene ese código (impresiones europeas antiguas, LOB-E001…) se queda el dato de YGOPRODeck.
+function ygoVersions(c, pr){
+  const ysets = c.card_sets || [];
+  if (!pr) return ysets.map(s => ({ ...s }));
+  const byCode = {};
+  for (const e of pr.list) (byCode[normCode(e.c)] ||= []).push(e);
+  const out = [], done = new Set();
+  const addCode = (k, code, setName) => {
+    done.add(k);
+    const byR = {};
+    for (const e of byCode[k]) (byR[e.r || '—'] ||= []).push(e);
+    for (const [r, prints] of Object.entries(byR)) out.push({ set_code: code, set_rarity: r, set_name: setName, prints });
+  };
+  for (const s of ysets) {
+    const k = normCode(s.set_code);
+    if (done.has(k)) continue;
+    if (byCode[k]) addCode(k, s.set_code, s.set_name);
+    else out.push({ ...s, set_rarity: /^(\d+|New|New artwork|Reprint|European.*)$/i.test(s.set_rarity) ? '—' : s.set_rarity, prints: [], noTcg: true }); // rarezas de YGOPRODeck que no son rarezas
+  }
+  // impresiones que TCGplayer tiene y YGOPRODeck no
+  for (const k of Object.keys(byCode)) if (!done.has(k)) {
+    const e = byCode[k][0];
+    addCode(k, e.c, e.g.replace(/\s*\((Worldwide English|25th Anniversary Edition)\)/i, ''));
+  }
+  return out;
+}
+const versionPrice = s => { const v = (s?.prints || []).map(printPrice).filter(Boolean); return v.length ? Math.min(...v) : null; };
 // impresiones de TCGplayer con ese código y rareza
 function printsFor(pr, s){
+  if (s?.prints) return s.prints;
   if (!pr || !s) return [];
   const same = pr.list.filter(e => normCode(e.c) === normCode(s.set_code));
   const r = same.filter(e => e.r.toLowerCase() === String(s.set_rarity).toLowerCase());
@@ -820,15 +855,16 @@ async function openYugioh(c, code, rarity){
   // escaneos reales de todas las impresiones de la carta (una sola consulta) + precios por impresión
   const [scans0, pr] = await Promise.all([withTimeout(ygpScans(c.name), 4000), withTimeout(ygoPrints(c.name), 4000)]);
   const scans = scans0 || [];
-  const priceOf = s => { const ps = printsFor(pr, s); return ps.length ? Math.min(...ps.map(printPrice).filter(Boolean)) || null : null; };
   const real = s => s && pickScan(scans, s.set_code, s.set_rarity);
-  // ordena: primero la edición buscada, luego por precio
-  const items = sets.length ? [...sets] : [null];
-  let idx = code ? items.findIndex(s => s && s.set_code.toUpperCase() === code && (!rarity || s.set_rarity === rarity)) : -1;
-  if (idx < 0 && code) idx = items.findIndex(s => s && s.set_code.toUpperCase() === code);
+  const vers = ygoVersions(c, pr);
+  const items = vers.length ? vers : [null];
+  // primero la edición buscada (por código; la rareza de YGOPRODeck puede no coincidir con la real)
+  const cc = code && normCode(code);
+  let idx = cc ? items.findIndex(s => s && normCode(s.set_code) === cc && (!rarity || s.set_rarity === rarity)) : -1;
+  if (idx < 0 && cc) idx = items.findIndex(s => s && normCode(s.set_code) === cc);
   return showVersions(items, idx < 0 ? 0 : idx, async s => yugiohView(c, s, real(s) || (!s && pickScan(scans, null, null)), s ? scanGroup(scans, s.set_code, s.set_rarity) : [], pr),
     s => { const x = real(s); const i = x ? ygpThumb(x.url) : c.card_images?.[0]?.image_url_small;
-      return s ? { r: s.set_rarity, t: s.set_code, p: usd(pr ? priceOf(s) : s.set_price), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
+      return s ? { r: s.set_rarity, t: s.set_code, p: s.prints?.length ? usd(versionPrice(s)) : (Number(s.set_price) ? '≈ ' + usd(s.set_price) : ''), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
 }
 
 function yugiohView(c, set, scan, group = [], pr = null){
@@ -845,20 +881,22 @@ function yugiohView(c, set, scan, group = [], pr = null){
     for (const e of ps) for (const [ed, [m, low]] of Object.entries(e.p))
       rows.push([[set.set_code, ps.length > 1 ? (is25(e) ? T('25 aniversario') : e.g) : '', T(ED_TCG[ed] || ed)].filter(Boolean).join(' · '),
         usd(m || low) + (low && m ? ` <small>(${T('desde')} ${usd(low)})</small>` : '')]);
-  } else if (set && !pr) rows.push(['#Esta edición (TCGplayer)'], [`${set.set_code} (${set.set_rarity})`, usd(set.set_price)]);
+  } else if (set && Number(set.set_price)) rows.push(['#Esta edición'], [`${set.set_code} (${set.set_rarity}) · YGOPRODeck`, usd(set.set_price)]);
   rows.push(['#Precio general de la carta'],
     ['Cardmarket (la edición más barata)', eur(p.cardmarket_price)], ['TCGplayer', usd(p.tcgplayer_price)],
     ['eBay', usd(p.ebay_price)], ['Amazon', usd(p.amazon_price)], ['CoolStuffInc', usd(p.coolstuffinc_price)]);
-  const sp = pr ? (chosen ? printPrice(chosen) : null) : set && Number(set.set_price);
+  const sp = chosen ? printPrice(chosen) : null;
+  const approx = !sp && set && Number(set.set_price) ? Number(set.set_price) : null; // TCGplayer no la vende: dato orientativo
   return {
     img: scan?.url || c.card_images?.[0]?.image_url, replica: !scan, name: c.name, rarity: set?.set_rarity,
     alts,
     updated: pr && ps.length ? T('TCGplayer del {0}', fecha(pr.updated)) : '',
     versionLabel: set ? `${set.set_code} · ${set.set_rarity}` : '',
     meta: set ? `${esc(set.set_name)} · ${esc(set.set_code)}` : esc(c.type),
-    mainLabel: sp ? 'Precio de esta edición exacta' : 'Precio en Cardmarket (desde)',
-    mainValue: (sp && usd(sp)) || eur(p.cardmarket_price) || usd(p.tcgplayer_price),
-    value: sp || Number(p.cardmarket_price) || null,
+    mainLabel: sp ? 'Precio de esta edición exacta' : approx ? 'Precio orientativo de esta edición' : set ? 'Precio de esta edición exacta' : 'Precio en Cardmarket (desde)',
+    mainValue: sp ? usd(sp) : approx ? usd(approx) : set ? '' : eur(p.cardmarket_price) || usd(p.tcgplayer_price),
+    approx: approx ? 'TCGplayer no vende esta impresión; dato de YGOPRODeck, puede estar desactualizado.' : set && !sp ? 'TCGplayer no tiene precio de esta impresión ahora mismo.' : '',
+    value: sp || approx || Number(p.cardmarket_price) || null,
     rows,
     links: [['Cardmarket', `https://www.cardmarket.com/es/YuGiOh/Products/Search?searchString=${encodeURIComponent(c.name)}`],
             ['TCGplayer', `https://www.tcgplayer.com/search/yugioh/product?q=${encodeURIComponent(c.name)}`],
@@ -884,14 +922,18 @@ async function openYugiohSet(name){
   // precios por impresión (un archivo pequeño por cada 2 letras del nombre)
   const prs = {};
   await withTimeout(Promise.all([...new Set(cards.map(c => c.name))].map(async n => { prs[n] = await ygoPrints(n); })), 6000);
-  const priceOf = (c, s) => { const pr = prs[c.name]; if (!pr) return Number(s.set_price) || null;
-    const v = printsFor(pr, s).map(printPrice).filter(Boolean); return v.length ? Math.min(...v) : null; };
   const items = [];
-  for (const c of cards) for (const s of c.card_sets || []) if (s.set_name === name) items.push({
+  for (const c of cards) {
+    const codes = new Set((c.card_sets || []).filter(s => s.set_name === name).map(s => normCode(s.set_code)));
+    for (const s of ygoVersions(c, prs[c.name])) if (codes.has(normCode(s.set_code))) {
+      const v = s.prints ? versionPrice(s) : Number(s.set_price) || null;
+      items.push({
     img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${s.set_rarity}`,
     real: () => ygoRealImg(c, s.set_code, s.set_rarity, true),
-    price: usd(priceOf(c, s)), v: priceOf(c, s), code: s.set_code,
+    price: v ? (s.noTcg ? '≈ ' : '') + usd(v) : '', v, code: s.set_code,
     open: () => openYugioh(c, s.set_code.toUpperCase(), s.set_rarity) });
+    }
+  }
   items.sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true }));
   renderGrid(`${esc(name)} · ${T('{0} cartas', items.length)}`, items, { sort: true });
 }
