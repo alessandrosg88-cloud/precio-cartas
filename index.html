@@ -865,11 +865,13 @@ async function showSealed(key){
   const types = Object.keys(SEALED_TYPES).filter(t => d.items.some(i => i.t === t));
   let type = types.includes('box') ? 'box' : types.includes('etb') ? 'etb' : 'all', q = '', sort = 'new', limit = 60;
   const val = i => i.e || i.u || null;
+  // las colecciones "Miscellaneous" / promos no tienen fecha real: al final
+  const setDate = i => /misc|promo|other/i.test(d.sets[i.g]?.n || '') ? '0' : String(d.sets[i.g]?.d || '');
   const draw = () => {
     let list = d.items.filter(i => (type === 'all' || i.t === type) && (!q || normName(i.n + ' ' + (d.sets[i.g]?.n || '')).includes(q)));
     list.sort(sort === 'hi' ? (a, b) => (val(b) ?? -1) - (val(a) ?? -1)
       : sort === 'lo' ? (a, b) => (val(a) ?? 1e9) - (val(b) ?? 1e9)
-      : (a, b) => String(d.sets[b.g]?.d || '').localeCompare(String(d.sets[a.g]?.d || '')));
+      : (a, b) => setDate(b).localeCompare(setDate(a)));
     out.innerHTML = `${backBtn()}
       <div class="bar"><h2>📦 Productos sellados · ${esc(GAMES[key].label)}</h2>
         <select id="ssort"><option value="new">Más nuevos primero</option><option value="hi">Más caros primero</option><option value="lo">Más baratos primero</option></select></div>
