@@ -286,7 +286,10 @@ const shardOf = n => norm(n).replace(/ /g, '').slice(0, 2).padEnd(2, '_');
 async function writePrints(key, prints){
   const dir = `data/${key === 'yugioh' ? 'ygo' : key + '-prints'}`;
   const shards = {};
-  for (const x of prints) { const k = norm(x.n); ((shards[shardOf(x.n)] ||= {})[k] ||= []).push({ c: x.c, r: x.r, g: x.g, id: x.id, p: x.p }); }
+  // variante de la carta según el nombre del producto: "Dark Magician (Arkana) (Quarter Century Secret Rare)" -> "Arkana"
+  const variant = n => [...String(n).matchAll(/\(([^()]+)\)/g)].map(m => m[1]).filter(t => !/rare|edition|parallel/i.test(t)).join(' · ');
+  for (const x of prints) { const k = norm(x.n), v = variant(x.n);
+    ((shards[shardOf(x.n)] ||= {})[k] ||= []).push({ c: x.c, r: x.r, g: x.g, id: x.id, p: x.p, ...(v ? { v } : {}) }); }
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });
   const updated = new Date().toISOString();
