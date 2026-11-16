@@ -393,7 +393,7 @@ function drawPicker(){
   rail.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
   rail.addEventListener('touchend', e => e.stopPropagation());
   const on = rail.querySelector('.tile.on');
-  if (on) rail.scrollLeft = on.offsetLeft - rail.clientWidth / 2 + on.offsetWidth / 2;
+  if (on) rail.scrollTo({ left: rail.scrollLeft + on.getBoundingClientRect().left - rail.getBoundingClientRect().left - (rail.clientWidth - on.offsetWidth) / 2, behavior: 'instant' });
 }
 
 async function go(step){
