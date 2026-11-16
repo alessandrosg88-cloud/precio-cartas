@@ -233,4 +233,5 @@ TRANS.fr = {
 341: 'Les créatures n’attaquent pas le tour où elles arrivent. Quand tu brises un Bouclier, l’adversaire le prend en main ; s’il a <b>Déclencheur de bouclier</b> (Shield Trigger), il l’utilise gratuitement !',
 342: 'En attaquant directement l’adversaire quand il n’a plus de Boucliers, ou s’il n’a plus de deck.',
 343: 'anglais', 344: 'espagnol', 345: 'italien', 346: 'français', 347: 'néerlandais', 348: 'allemand', 349: 'japonais', 350: 'chinois', 351: 'coréen',
+352: 'Faites défiler pour voir toutes les versions ({0})',
 };

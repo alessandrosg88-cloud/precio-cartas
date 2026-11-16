@@ -233,4 +233,5 @@ TRANS.en = {
 341: 'Creatures can’t attack the turn they come out. When you break a Shield, the opponent adds it to their hand; if it has <b>Shield Trigger</b>, they use it for free!',
 342: 'Attacking your opponent directly when they have no Shields left, or if they run out of deck.',
 343: 'English', 344: 'Spanish', 345: 'Italian', 346: 'French', 347: 'Dutch', 348: 'German', 349: 'Japanese', 350: 'Chinese', 351: 'Korean',
+352: 'Swipe to see all versions ({0})',
 };

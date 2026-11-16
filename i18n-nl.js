@@ -233,4 +233,5 @@ TRANS.nl = {
 341: 'Wezens vallen niet aan in de beurt dat ze binnenkomen. Als je een Schild breekt, neemt de tegenstander het in de hand; heeft het <b>Shield Trigger</b>, dan gebruikt hij het gratis!',
 342: 'Door de tegenstander direct aan te vallen als hij geen Schilden meer heeft, of als zijn deck op is.',
 343: 'Engels', 344: 'Spaans', 345: 'Italiaans', 346: 'Frans', 347: 'Nederlands', 348: 'Duits', 349: 'Japans', 350: 'Chinees', 351: 'Koreaans',
+352: 'Veeg om alle versies te zien ({0})',
 };

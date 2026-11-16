@@ -233,4 +233,5 @@ TRANS.it = {
 341: 'Le creature non attaccano nel turno in cui entrano. Quando rompi uno Scudo, l’avversario lo prende in mano; se ha <b>Shield Trigger</b>, lo usa gratis!',
 342: 'Attaccando direttamente l’avversario quando non ha più Scudi, o se resta senza mazzo.',
 343: 'inglese', 344: 'spagnolo', 345: 'italiano', 346: 'francese', 347: 'olandese', 348: 'tedesco', 349: 'giapponese', 350: 'cinese', 351: 'coreano',
+352: 'Scorri per vedere tutte le versioni ({0})',
 };

@@ -233,4 +233,5 @@ TRANS.de = {
 341: 'Kreaturen greifen nicht in dem Zug an, in dem sie ins Spiel kommen. Brichst du einen Schild, nimmt ihn der Gegner auf die Hand; hat er <b>Schildauslöser</b> (Shield Trigger), nutzt er ihn kostenlos!',
 342: 'Wenn du den Gegner direkt angreifst und er keine Schilde mehr hat, oder sein Deck leer ist.',
 343: 'Englisch', 344: 'Spanisch', 345: 'Italienisch', 346: 'Französisch', 347: 'Niederländisch', 348: 'Deutsch', 349: 'Japanisch', 350: 'Chinesisch', 351: 'Koreanisch',
+352: 'Wischen, um alle Versionen zu sehen ({0})',
 };

@@ -350,5 +350,6 @@ const ES_KEYS = [
 "alemán",
 "japonés",
 "chino",
-"coreano"
+"coreano",
+"Desliza para ver todas las versiones ({0})"
 ];

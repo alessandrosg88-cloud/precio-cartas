@@ -56,6 +56,21 @@
   .vlabel{text-align:center;font-size:13px;color:var(--muted);line-height:1.3}
   .vlabel b{display:block;color:var(--text);font-size:14px}
   .picker{margin:0 0 14px}
+  .result > *{min-width:0}
+  .rail{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;padding:4px 2px 10px;margin:0 0 10px;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;overscroll-behavior-x:contain}
+  .tile{flex:none;width:88px;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;gap:3px;border:2px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:5px;cursor:pointer;font:inherit}
+  .tile img{width:100%;aspect-ratio:63/88;object-fit:cover;border-radius:6px;background:var(--line)}
+  .tile .noimg{width:100%;aspect-ratio:63/88;display:grid;place-items:center;border-radius:6px;background:var(--line);font-size:24px}
+  .tile .tr{font-size:11px;line-height:1.2;color:var(--muted);text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tile .tp{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+  .tile:hover{border-color:var(--accent)}
+  .tile.on{border-color:var(--accent);background:var(--accent-soft)}
+  .tile.on .tr{color:var(--accent);font-weight:700}
+  .pic img.slideR{animation:slideR .22s ease-out}
+  .pic img.slideL{animation:slideL .22s ease-out}
+  @keyframes slideR{from{transform:translateX(40px);opacity:.3}to{transform:none;opacity:1}}
+  @keyframes slideL{from{transform:translateX(-40px);opacity:.3}to{transform:none;opacity:1}}
+  @media (prefers-reduced-motion: reduce){.pic img.slideR,.pic img.slideL{animation:none}.rail{scroll-behavior:auto}}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
   .chip{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer}
   .chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
@@ -175,8 +190,8 @@
   <footer data-t="Precios: Cardmarket (guía de precios pública) · TCGplayer · tcgdex.net · ygoprodeck.com · scryfall.com · Torekakaku — orientativos."></footer>
 </div>
 
-<script src="i18n-keys.js?v=5"></script>
-<script src="i18n.js?v=5"></script>
+<script src="i18n-keys.js?v=6"></script>
+<script src="i18n.js?v=6"></script>
 <script src="guias.js?v=5"></script>
 <script src="como-se-usa.js?v=5"></script>
 <script>
@@ -334,8 +349,10 @@ async function showVersions(items, index, build, label){
   toTop();
 }
 
+let slideDir = 0; // -1 izquierda, 1 derecha: para la animación de la imagen
 function jump(i){
   if (!current || i === current.index) return;
+  slideDir = i > current.index ? 1 : -1;
   current.index = i;
   const pic = out.querySelector('.pic'); if (pic) pic.classList.add('loading');
   drawCurrent();
@@ -352,6 +369,11 @@ function drawPicker(){
   labels.forEach(l => { const x = rars.find(x => x.r === l.r); if (x) x.count++; });
   const curR = labels[i].r;
   box.innerHTML = `
+    <p class="lbl2">${T('Desliza para ver todas las versiones ({0})', n)}</p>
+    <div class="rail" id="rail">${labels.map((l, k) =>
+      `<button class="tile${k === i ? ' on' : ''}" data-k="${k}" title="${esc([l.t, l.r].filter(Boolean).join(' · '))}">
+        ${l.i ? `<img src="${l.i}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}
+        <span class="tr">${esc(l.r || '—')}</span><span class="tp">${l.p || '·'}</span></button>`).join('')}</div>
     ${rars.length > 1 && rars.length <= 20 ? `<p class="lbl2">${T('Todas las rarezas de esta carta ({0})', rars.length)}</p><div class="chips">${rars.map(x =>
       `<button class="chip${x.r === curR ? ' on' : ''}" data-r="${esc(x.r)}">${esc(x.r)}${x.count > 1 ? `<small>×${x.count}</small>` : ''}</button>`).join('')}</div>` : ''}
     <p class="lbl2">${T('Elige la versión')}</p>
@@ -365,10 +387,18 @@ function drawPicker(){
     jump(next);
   });
   $('vsel').onchange = e => jump(Number(e.target.value));
+  const rail = $('rail');
+  rail.querySelectorAll('.tile').forEach(b => b.onclick = () => jump(Number(b.dataset.k)));
+  // la carrusel no debe disparar el cambio de versión al deslizarla
+  rail.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+  rail.addEventListener('touchend', e => e.stopPropagation());
+  const on = rail.querySelector('.tile.on');
+  if (on) rail.scrollLeft = on.offsetLeft - rail.clientWidth / 2 + on.offsetWidth / 2;
 }
 
 async function go(step){
   if (!current || current.items.length < 2) return;
+  slideDir = step;
   current.index = (current.index + step + current.items.length) % current.items.length;
   const pic = out.querySelector('.pic'); if (pic) pic.classList.add('loading');
   await drawCurrent();
@@ -398,7 +428,7 @@ function render(v){
     ${backBtn()}
     <div class="result" id="result">
       <div class="pic">
-        ${v.img ? `<img src="${v.img}" alt="${esc(v.name)}">` : '<img alt="">'}
+        ${v.img ? `<img src="${v.img}" alt="${esc(v.name)}"${slideDir ? ` class="slide${slideDir > 0 ? 'R' : 'L'}"` : ''}>` : '<img alt="">'}
         ${n > 1 ? `<div class="nav">
             <button class="arrow" id="prev" aria-label="${T('Versión anterior')}">‹</button>
             <div class="vlabel"><b>${T('Versión {0} de {1}', i + 1, n)}</b>${esc(v.versionLabel || v.rarity || '')}</div>
@@ -431,7 +461,9 @@ function render(v){
   }
   wireBack();
   if (n > 1) { $('prev').onclick = () => go(-1); $('next').onclick = () => go(1); }
+  slideDir = 0;
   drawPicker();
+  preloadNeighbours();
   if (v.reload) $('refresh').onclick = async () => {
     $('refresh').textContent = T('Actualizando…');
     try { await v.reload(); } catch (e) { $('refresh').textContent = T('⚠️ Error, reintenta'); }
@@ -450,6 +482,12 @@ function render(v){
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
     x0 = null;
   });
+}
+// precarga las imágenes de la versión anterior y siguiente para que el cambio sea instantáneo
+function preloadNeighbours(){
+  if (!current || current.items.length < 2) return;
+  const n = current.items.length;
+  [1, -1].forEach(d => { const l = current.label(current.items[(current.index + d + n) % n]); if (l?.i) new Image().src = l.i; });
 }
 document.addEventListener('keydown', e => {
   if (!$('result') || document.activeElement === $('q')) return;
@@ -563,7 +601,7 @@ async function openPokemon(c){
   others = others.slice(-60);
   const idx = others.findIndex(o => o.id === c.id);
   const label = o => { const f = pkmCache[o.id];
-    return f ? { r: f.rarity, t: `${f.set?.name} · ${f.localId}`, p: eur(f.pricing?.cardmarket?.trend) } : { r: '', t: o.id }; };
+    return f ? { r: f.rarity, t: `${f.set?.name} · ${f.localId}`, p: eur(f.pricing?.cardmarket?.trend), i: pkmImg(f, 'low') } : { r: '', t: o.id, i: pkmImg(o, 'low') }; };
   await showVersions(others, idx, async o => {
     const full = pkmCache[o.id] || (pkmCache[o.id] = await getJSON(`${PKM}/cards/${o.id}`));
     return pokemonView(full);
@@ -654,7 +692,7 @@ function openYugioh(c, code, rarity){
   let idx = code ? items.findIndex(s => s && s.set_code.toUpperCase() === code && (!rarity || s.set_rarity === rarity)) : -1;
   if (idx < 0 && code) idx = items.findIndex(s => s && s.set_code.toUpperCase() === code);
   return showVersions(items, idx < 0 ? 0 : idx, async s => yugiohView(c, s),
-    s => s ? { r: s.set_rarity, t: s.set_code, p: usd(s.set_price) } : { r: '', t: c.name });
+    s => s ? { r: s.set_rarity, t: s.set_code, p: usd(s.set_price), i: c.card_images?.[0]?.image_url_small } : { r: '', t: c.name, i: c.card_images?.[0]?.image_url_small });
 }
 
 function yugiohView(c, set){
@@ -730,7 +768,7 @@ async function openMagic(c){
   } catch (e) {}
   const idx = prints.findIndex(p => p.id === c.id);
   return showVersions(prints, idx < 0 ? 0 : idx, async p => magicView(p),
-    p => ({ r: p.rarity, t: `${p.set_name} · ${p.collector_number}`, p: eur(p.prices?.eur) || usd(p.prices?.usd) }));
+    p => ({ r: p.rarity, t: `${p.set_name} · ${p.collector_number}`, p: eur(p.prices?.eur) || usd(p.prices?.usd), i: mtgImg(p, 'small') }));
 }
 
 function magicView(c){
@@ -844,7 +882,7 @@ function openLocal(c, versions){
   const key = game;
   const idx = versions.indexOf(c);
   return showVersions(versions, idx < 0 ? 0 : idx, async x => localView(key, x),
-    x => ({ r: localRarity(x), t: x.c || x.n, p: localPrice(x) }));
+    x => ({ r: localRarity(x), t: x.c || x.n, p: localPrice(x), i: tcgImg(x) }));
 }
 
 function localView(key, c){
