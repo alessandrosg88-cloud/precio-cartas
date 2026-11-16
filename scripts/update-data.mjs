@@ -239,13 +239,16 @@ function matchPrintsCardmarket(prints, cm){
         const a = [...gx].sort((u, v) => (Math.min(...Object.values(u.p).map(q => q[0] || Infinity)) - Math.min(...Object.values(v.p).map(q => q[0] || Infinity))));
         const b = [...gp].filter(p => price(p)).sort((u, v) => price(u) - price(v));
         if (!b.length) continue;
-        // si TCGplayer tiene más versiones que Cardmarket (o al revés) solo emparejamos cuando cuadran
-        if (a.length !== b.length && !(a.length === 1 && gp.length === 1)) continue;
+        if (k === 'dark magician') console.log(`   [DM] ${list[0].g}: TCG ${a.map(x => x.r + (x.v ? '/' + x.v : '') + ' $' + Object.values(x.p).map(q => q[0]).join('/')).join(', ')} || CM ${b.map(p => p.idProduct + ' ' + p.name + ' €' + price(p)).join(', ')}`);
+        const same = a.length === b.length;
         a.forEach((x, i) => {
-          const pr = b[i], pg = cm.prices[pr.idProduct], e = price(pr);
           const u = Math.min(...Object.values(x.p).map(q => q[0] || Infinity));
+          // mismo nº de versiones: por orden de precio; si no, la de precio más parecido (aproximado)
+          const pr = same ? b[i] : !isFinite(u) ? null : [...b].sort((p, q) => Math.abs(Math.log(price(p) / (u * 0.92))) - Math.abs(Math.log(price(q) / (u * 0.92))))[0];
+          if (!pr) return;
+          const pg = cm.prices[pr.idProduct], e = price(pr);
           if (isFinite(u) && Math.max(e, u) > 3 && (e / u > 3 || e / u < 0.33)) { rejected++; return; }
-          x.cm = pr.idProduct; x.e = r2(e); x.el = r2(pg.low); x.e30 = r2(pg.avg30); n++;
+          x.cm = pr.idProduct; x.e = r2(e); x.el = r2(pg.low); x.e30 = r2(pg.avg30); if (!same || a.length > 1) x.ea = 1; n++;
         });
       }
     }
@@ -344,7 +347,7 @@ async function writePrints(key, prints){
   const variant = n => [...String(n).matchAll(/\(([^()]+)\)/g)].map(m => m[1]).filter(t => !/rare|edition|parallel/i.test(t)).join(' · ');
   for (const x of prints) { const k = norm(x.n), v = variant(x.n);
     ((shards[shardOf(x.n)] ||= {})[k] ||= []).push({ c: x.c, r: x.r, g: x.g, id: x.id, p: x.p, ...(v ? { v } : {}),
-      ...(x.cm ? { cm: x.cm, e: x.e, el: x.el, e30: x.e30 } : {}) }); }
+      ...(x.cm ? { cm: x.cm, e: x.e, el: x.el, e30: x.e30, ...(x.ea ? { ea: 1 } : {}) } : {}) }); }
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });
   const updated = new Date().toISOString();
