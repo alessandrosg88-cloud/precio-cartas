@@ -15,7 +15,7 @@ const GAMES = {
   wow:      { name: 'World of Warcraft',  tcg: [13],     cm: 2 },
   // De estos tres las cartas sueltas se consultan en directo; aquí solo bajamos los productos sellados
   pokemon:  { name: 'Pokémon',            tcg: [3],      cm: 6, sealedOnly: true },
-  yugioh:   { name: 'Yu-Gi-Oh!',          tcg: [2],      cm: 3, sealedOnly: true },
+  yugioh:   { name: 'Yu-Gi-Oh!',          tcg: [2],      cm: 3, sealedOnly: true, prints: true }, // + precio de cada impresión (data/ygo)
   magic:    { name: 'Magic',              tcg: [1],      cm: 1, sealedOnly: true },
 };
 const only = process.argv[2]; // opcional: actualizar solo un juego
@@ -49,9 +49,9 @@ const cmPrice = pg => pg ? (pg.trend || pg.avg || pg['trend-foil'] || pg['avg-fo
 const r2 = v => v == null || v === 0 ? null : Math.round(v * 100) / 100;
 
 // ---------- TCGplayer (tcgcsv) ----------
-async function loadTcg(categoryId, sealedOnly){
+async function loadTcg(categoryId, sealedOnly, wantPrints){
   const groups = (await getJSON(`https://tcgcsv.com/tcgplayer/${categoryId}/groups`)).results;
-  const sets = {}, cards = [], texts = {}, fields = new Set(), sealed = [], sealedSets = {};
+  const sets = {}, cards = [], texts = {}, fields = new Set(), sealed = [], sealedSets = {}, prints = [];
   await pool(groups, 4, async g => {
     const [prods, prices] = await Promise.all([
       getJSON(`https://tcgcsv.com/tcgplayer/${categoryId}/${g.groupId}/products`).catch(() => ({ results: [] })),
@@ -67,6 +67,12 @@ async function loadTcg(categoryId, sealedOnly){
         sealed.push({ id: p.productId, n: p.name, g: g.groupId, u: r2(pr.marketPrice ?? pr.midPrice), ul: r2(pr.lowPrice), t: sealedType(p.name) });
         sealedSets[g.groupId] = { n: g.name, d: (g.publishedOn || '').slice(0, 10) };
         continue;
+      }
+      if (wantPrints && ext.Number) {
+        // Precio de TCGplayer de cada impresión, separado por edición (1st Edition, Unlimited, Limited…)
+        const ed = {};
+        for (const x of byId[p.productId] || []) if (x.marketPrice || x.lowPrice || x.midPrice) ed[x.subTypeName || 'Normal'] = [r2(x.marketPrice ?? x.midPrice), r2(x.lowPrice)];
+        prints.push({ n: p.name, c: ext.Number, r: ext.Rarity || '', g: g.name, id: p.productId, p: ed });
       }
       if (sealedOnly) continue;
       // Texto y datos de la carta (efecto, coste, poder…) para "Cómo se usa esta carta"
@@ -86,7 +92,7 @@ async function loadTcg(categoryId, sealedOnly){
     if (n) sets[g.groupId] = { n: g.name, a: g.abbreviation || '', d: (g.publishedOn || '').slice(0, 10) };
   });
   console.log(`   Campos de texto: ${[...fields].join(', ')}`);
-  return { sets, cards, texts, sealed, sealedSets };
+  return { sets, cards, texts, sealed, sealedSets, prints };
 }
 
 // Tipo de producto sellado según su nombre
@@ -273,15 +279,31 @@ async function loadDuelMasters(){
   return { sets, cards };
 }
 
+// Precio por impresión (Yu-Gi-Oh!): un archivo por las 2 primeras letras del nombre de la carta,
+// así la web descarga solo un archivo pequeño con todas las impresiones de esa carta.
+// La web usa la misma regla (ygoShard) para encontrarlo.
+const shardOf = n => norm(n).replace(/ /g, '').slice(0, 2).padEnd(2, '_');
+async function writePrints(key, prints){
+  const dir = `data/${key === 'yugioh' ? 'ygo' : key + '-prints'}`;
+  const shards = {};
+  for (const x of prints) { const k = norm(x.n); ((shards[shardOf(x.n)] ||= {})[k] ||= []).push({ c: x.c, r: x.r, g: x.g, id: x.id, p: x.p }); }
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dir, { recursive: true });
+  const updated = new Date().toISOString();
+  for (const [k, d] of Object.entries(shards)) await writeFile(`${dir}/${k}.json`, JSON.stringify({ updated, d }));
+  console.log(`   Impresiones con precio: ${prints.length} en ${Object.keys(shards).length} archivos (${dir})`);
+}
+
 await mkdir('data/sealed', { recursive: true });
 const index = {};
 for (const [key, G] of Object.entries(GAMES)) {
   if (only && only !== key) continue;
   console.log(`\n== ${G.name} ==`);
   try {
-    const all = { sets: {}, cards: [], texts: {}, sealed: [], sealedSets: {} };
+    const all = { sets: {}, cards: [], texts: {}, sealed: [], sealedSets: {}, prints: [] };
     for (const cat of G.tcg) {
-      const t = await loadTcg(cat, G.sealedOnly);
+      const t = await loadTcg(cat, G.sealedOnly, G.prints);
+      all.prints.push(...t.prints);
       Object.assign(all.sets, t.sets); all.cards.push(...t.cards); Object.assign(all.texts, t.texts);
       all.sealed.push(...t.sealed); Object.assign(all.sealedSets, t.sealedSets);
     }
@@ -294,6 +316,7 @@ for (const [key, G] of Object.entries(GAMES)) {
       console.log(`   Sellados: ${all.sealed.length}, con precio Cardmarket: ${matchSealed(all.sealed, cm, all.sealedSets)}`);
     } catch (e) { console.log('   ⚠️ Cardmarket no disponible:', e.message); }
     await writeFile(`data/sealed/${key}.json`, JSON.stringify({ updated: new Date().toISOString(), cmUpdated, sets: all.sealedSets, items: all.sealed }));
+    if (G.prints && all.prints.length > 1000) await writePrints(key, all.prints);
     if (G.sealedOnly) continue;
     const out = { game: G.name, updated: new Date().toISOString(), cmUpdated, sets: all.sets, cards: all.cards };
     await writeFile(`data/${key}.json`, JSON.stringify(out));
