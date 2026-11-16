@@ -94,10 +94,12 @@ function sealedType(name){
   const n = name.toLowerCase();
   if (/\bcase\b/.test(n)) return 'case';
   if (/elite trainer box|\betb\b/.test(n)) return 'etb';
-  if (/booster box|booster display|\bdisplay\b|draft booster box|play booster box|collector booster box|set booster box/.test(n)) return 'box';
-  if (/booster pack|\bpack\b|blister|sleeved booster|booster$/.test(n)) return 'pack';
+  if (/booster box|booster display|draft booster box|play booster box|collector booster box|set booster box/.test(n)) return 'box';
+  if (/\btins?\b/.test(n)) return 'coll';
   if (/deck|starter|structure|precon/.test(n)) return 'deck';
-  if (/bundle|collection|\btin\b|premium|gift|box|set/.test(n)) return 'coll';
+  if (/booster pack|\bpack\b|blister|sleeved booster|booster$/.test(n)) return 'pack';
+  if (/\bdisplay\b/.test(n)) return 'box';
+  if (/bundle|collection|premium|gift|box|set/.test(n)) return 'coll';
   return 'other';
 }
 
