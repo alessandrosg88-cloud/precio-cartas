@@ -791,15 +791,21 @@ async function searchYugiohLocal(q){
   const hit = {};
   const viaYgo = ['de', 'fr', 'it', 'pt'].map(l => getJSON(`${YGO}/cardinfo.php?fname=${encodeURIComponent(q)}&language=${l}`).catch(() => null)
     .then(r => (r?.data || []).forEach(c => { hit[c.id] ||= { lang: l, name: c.name }; })));
-  // Yugipedia distingue mayúsculas: probamos cada palabra tal cual, en minúscula y con mayúscula inicial
-  const words = q.trim().split(/\s+/).filter(w => w.length > 1).slice(0, 6);
-  const cond = l => words.map(w => { const v = [...new Set([w, w.toLowerCase(), w[0].toUpperCase() + w.slice(1).toLowerCase()])];
-    return `[[${l} name::${v.map(x => `~*${x.replace(/[[\]|]/g, '')}*`).join('||')}]]`; }).join('');
+  // Yugipedia distingue mayúsculas y acentos ("dragon" no encuentra "Dragón"). Por eso cada palabra se busca
+  // con comodines en la primera letra, las vocales y la n (dragon -> *r*g*n, que sí encuentra Dragón/dragón)
+  // y luego comprobamos el nombre sin acentos ni mayúsculas.
+  const plain = x => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const qw = plain(q).split(/[^a-z0-9ñ]+/).map(w => w.replace(/ñ/g, 'n')).filter(w => w.length > 1).slice(0, 6);
+  const pat = w => ('*' + w.slice(1).replace(/[aeiouyn]/g, '*') + '*').replace(/\*+/g, '*');
+  const strong = qw.filter(w => pat(w).replace(/\*/g, '').length >= 1);
+  const cond = l => strong.map(w => `[[${l} name::~${pat(w)}]]`).join('');
+  const fits = name => { const n = plain(name).replace(/ñ/g, 'n'); return qw.every(w => n.includes(w)); };
   // una consulta por idioma (Yugipedia no admite bien varias con OR)
-  const viaYgp = Object.entries(YLANGS).map(([lang, l]) => getJSON(YGP_ASK + encodeURIComponent(`[[Category:TCG cards]]${cond(l[0])}|?Password|?${l[0]} name|limit=40`)).catch(() => null)
+  const viaYgp = !strong.length ? [] : Object.entries(YLANGS).map(([lang, l]) => getJSON(YGP_ASK + encodeURIComponent(`[[Category:TCG cards]]${cond(l[0])}|?Password|?${l[0]} name|limit=500`)).catch(() => null)
     .then(r => Object.values(r?.query?.results || {}).forEach(x => {
-      const id = Number(x.printouts.Password?.[0]); if (!id || hit[id]) return;
-      hit[id] = { lang, name: x.printouts[`${l[0]} name`]?.[0] || '' };
+      const id = Number(x.printouts.Password?.[0]), name = x.printouts[`${l[0]} name`]?.[0] || '';
+      if (!id || hit[id] || !fits(name)) return;
+      hit[id] = { lang, name };
     })));
   await Promise.all([...viaYgo, ...viaYgp]);
   const ids = Object.keys(hit).slice(0, 80);
