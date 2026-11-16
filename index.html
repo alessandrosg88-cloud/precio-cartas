@@ -795,15 +795,13 @@ async function searchYugiohLocal(q){
   const words = q.trim().split(/\s+/).filter(w => w.length > 1).slice(0, 6);
   const cond = l => words.map(w => { const v = [...new Set([w, w.toLowerCase(), w[0].toUpperCase() + w.slice(1).toLowerCase()])];
     return `[[${l} name::${v.map(x => `~*${x.replace(/[[\]|]/g, '')}*`).join('||')}]]`; }).join('');
-  const viaYgp = getJSON(YGP_ASK + encodeURIComponent(Object.entries(YLANGS).map(([, l]) => `[[Category:TCG cards]]${cond(l[0])}`).join(' OR ')
-      + '|?Password' + Object.values(YLANGS).map(l => `|?${l[0]} name`).join('') + '|limit=60')).catch(() => null)
+  // una consulta por idioma (Yugipedia no admite bien varias con OR)
+  const viaYgp = Object.entries(YLANGS).map(([lang, l]) => getJSON(YGP_ASK + encodeURIComponent(`[[Category:TCG cards]]${cond(l[0])}|?Password|?${l[0]} name|limit=40`)).catch(() => null)
     .then(r => Object.values(r?.query?.results || {}).forEach(x => {
       const id = Number(x.printouts.Password?.[0]); if (!id || hit[id]) return;
-      const ql = q.toLowerCase();
-      const [lang] = Object.entries(YLANGS).find(([, l]) => String(x.printouts[`${l[0]} name`]?.[0] || '').toLowerCase().includes(words[0]?.toLowerCase() || ql)) || ['es'];
-      hit[id] = { lang, name: x.printouts[`${YLANGS[lang][0]} name`]?.[0] || '' };
-    }));
-  await Promise.all([...viaYgo, viaYgp]);
+      hit[id] = { lang, name: x.printouts[`${l[0]} name`]?.[0] || '' };
+    })));
+  await Promise.all([...viaYgo, ...viaYgp]);
   const ids = Object.keys(hit).slice(0, 80);
   if (!ids.length) return { cards: [], hit };
   const r = await getJSON(`${YGO}/cardinfo.php?id=${ids.join(',')}`).catch(() => null);
