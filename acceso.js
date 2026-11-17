@@ -28,6 +28,7 @@
     html:not(.locked) #accGate{display:none}
     #accGate form{background:#fff;color:#0f172a;border-radius:16px;padding:28px 24px;width:100%;max-width:340px;
       box-shadow:0 20px 50px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:12px}
+    #accGate .accLogo{width:130px;height:130px;border-radius:50%;margin:0 auto}
     #accGate h2{margin:0 0 4px;font-size:22px;text-align:center}
     #accGate p{margin:0;font-size:14px;color:#475569;text-align:center}
     #accGate input{font:inherit;font-size:16px;padding:12px;border:1px solid #cbd5e1;border-radius:10px;width:100%;box-sizing:border-box}
@@ -42,6 +43,7 @@
   function drawGate(){
     if ($('accGate')) return;
     document.body.insertAdjacentHTML('afterbegin', `<div id="accGate"><form id="accForm" autocomplete="on">
+      <img class="accLogo" src="logo.jpg" alt="Colezzioni Saglimbeni Medina">
       <h2>🔒 Acceso privado</h2>
       <p>Solo el administrador puede entrar.</p>
       <input id="accEmail" type="email" placeholder="Email del administrador" autocomplete="username" required>
