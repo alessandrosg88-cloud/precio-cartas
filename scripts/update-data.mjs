@@ -6,7 +6,7 @@ import { writeFile, mkdir, rm } from 'node:fs/promises';
 
 const GAMES = {
   onepiece: { name: 'One Piece',          tcg: [68],     cm: 18 },
-  dragonball: { name: 'Dragon Ball',      tcg: [80, 27], cm: 13 },
+  dragonball: { name: 'Dragon Ball',      tcg: [80, 27, 23], cm: 13 }, // Fusion World, Super Masters y Dragon Ball Z (Panini)
   digimon:  { name: 'Digimon',            tcg: [63],     cm: 17 },
   lorcana:  { name: 'Lorcana',            tcg: [71],     cm: 19 },
   gundam:   { name: 'Gundam',             tcg: [86],     cm: 24 },
