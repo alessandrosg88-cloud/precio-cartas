@@ -34,7 +34,8 @@
     #accGate button{font:inherit;font-size:16px;font-weight:600;padding:12px;border:0;border-radius:10px;background:#2563eb;color:#fff;cursor:pointer}
     #accGate button:disabled{opacity:.6;cursor:default}
     #accGate .accMsg{min-height:18px;font-size:14px;color:#dc2626}
-    #accGate .accMsg.ok{color:#475569}`;
+    #accGate .accMsg.ok{color:#475569}
+    #accGate .accLink{background:none;color:#2563eb;font-weight:500;font-size:14px;padding:4px}`;
   document.head.appendChild(st);
 
   const $ = id => document.getElementById(id);
@@ -46,6 +47,7 @@
       <input id="accEmail" type="email" placeholder="Email del administrador" autocomplete="username" required>
       <input id="accPass" type="password" placeholder="Contraseña" autocomplete="current-password" required>
       <button id="accBtn" type="submit" disabled>Comprobando…</button>
+      <button id="accForgot" type="button" class="accLink">¿No tienes contraseña o la olvidaste?</button>
       <div class="accMsg ok" id="accMsg"></div>
     </form></div>`);
   }
@@ -57,7 +59,7 @@
     drawGate();
     try {
       const { initializeApp, getApps, getApp } = await import(FB + 'firebase-app.js');
-      const { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } = await import(FB + 'firebase-auth.js');
+      const { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } = await import(FB + 'firebase-auth.js');
       // usa la misma app de Firebase que la página (así la sesión es la misma)
       const app = getApps().length ? getApp() : initializeApp(CFG);
       const auth = getAuth(app);
@@ -78,6 +80,13 @@
         try { await signInWithEmailAndPassword(auth, email, $('accPass').value); $('accPass').value = ''; }
         catch { msg('Email o contraseña incorrectos.'); }
         ready();
+      });
+
+      // envía al email del administrador un enlace para poner una contraseña nueva
+      $('accForgot').addEventListener('click', async () => {
+        try { await sendPasswordResetEmail(auth, ADMIN);
+          msg('Te hemos enviado un email a ' + ADMIN + ' para poner la contraseña. Mira también en spam.', true); }
+        catch { msg('No se pudo enviar el email. Inténtalo otra vez.'); }
       });
     } catch {
       msg('No se pudo conectar. Recarga la página.');
