@@ -436,5 +436,11 @@ const ES_KEYS = [
 "Límites de centrado de PSA",
 "Nota",
 "No se ha podido abrir la foto. Prueba con otra.",
-"📐 Medir el centrado"
+"📐 Medir el centrado",
+"Buscando el código… mantén la carta quieta dentro del recuadro.",
+"Preparando el lector… {0}%",
+"No encontré un código válido. He leído: «{0}». Acerca más la cámara, con buena luz, y vuelve a intentarlo.",
+"El lector tardó demasiado. Inténtalo otra vez.",
+"No se pudo cargar el lector. Revisa tu conexión e inténtalo otra vez.",
+"🔦 Linterna"
 ];
