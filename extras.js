@@ -233,7 +233,7 @@
       const [r, ss] = await Promise.all([
         getJSON(`${MTG}/cards/search?order=eur&dir=desc&q=${encodeURIComponent(`date>=${since} -is:digital eur>0`)}`, 1).catch(() => null),
         getJSON(`${MTG}/sets`, 1).catch(() => null)]);
-      const cards = (r?.data || []).slice(0, 12).map(c => ({ n: c.name, c: `${c.set.toUpperCase()} ${c.collector_number}`, r: c.rarity, s: c.set_name,
+      const cards = (r?.data || []).filter(c => Number(c.prices?.eur) > 0).slice(0, 12).map(c => ({ n: c.name, c: `${c.set.toUpperCase()} ${c.collector_number}`, r: c.rarity, s: c.set_name,
         img: mtgImg(c, 'small'), price: eur(c.prices?.eur) || usd(c.prices?.usd), open: () => openMagic(c), q: `${c.set} ${c.collector_number}` }));
       if (cards.length) tabs = [['top', '💎 Las más caras de las últimas expansiones', cards]];
       const today = new Date().toISOString().slice(0, 10);
