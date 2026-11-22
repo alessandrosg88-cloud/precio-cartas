@@ -220,7 +220,71 @@
   .shoot{background:#4ade80;color:#06281a}
   .sec2{background:#2a2f3a;color:#fff}
   #scanStatus{min-height:24px;margin-top:12px;text-align:center;font-size:15px;color:#d1d5db}
-  @media (max-width:640px){ .result{grid-template-columns:1fr} .pic{max-width:280px;margin:0 auto;width:100%} .big .val{font-size:34px} }
+  /* ---- Modo oscuro / claro elegido a mano (extras.js) ---- */
+  :root[data-theme="dark"]{ --bg:#0f1115; --card:#181b22; --text:#eef0f4; --muted:#9aa3b2; --line:#2a2f3a;
+    --accent:#5b8cff; --accent-soft:#1d2840; --good:#34d399; --bad:#f87171; --warn:#fbbf24; color-scheme:dark }
+  :root[data-theme="light"]{ --bg:#f4f5f8; --card:#ffffff; --text:#1c1f26; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#2563eb; --accent-soft:#e8efff; --good:#059669; --bad:#dc2626; --warn:#b45309; color-scheme:light }
+  .langbar{flex-wrap:wrap}
+  .curbar{position:relative}
+  /* ---- Ayuda plegable ---- */
+  .help .hfold{display:none;border:0;background:none;color:var(--accent);font-weight:700;font-size:15px;cursor:pointer;padding:0}
+  .help.folded{padding:8px 14px;margin:10px 0 14px}
+  .help.folded .hfold{display:block}
+  .help.folded .hbody{display:none}
+  /* ---- Autocompletar ---- */
+  .sbox{position:relative}
+  .sug{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:8;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.2);padding:4px;max-height:min(420px,60vh);overflow:auto}
+  .sug[hidden]{display:none}
+  .sg{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--text);padding:6px 8px;border-radius:8px;cursor:pointer;text-align:left;font:inherit;font-size:15px}
+  .sg img{width:32px;aspect-ratio:63/88;object-fit:cover;border-radius:3px;background:var(--line);flex:none}
+  .sg .si{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sg small{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis}
+  .sg .sp{font-weight:700;color:var(--good);font-variant-numeric:tabular-nums;flex:none}
+  .sg.on,.sg:hover{background:var(--accent-soft)}
+  .sg mark{background:none;color:var(--accent);font-weight:700}
+  /* ---- Selector de versiones: orden y filtros ---- */
+  .vtools{display:flex;gap:8px;margin:0 0 8px}
+  .vtools select{width:auto;flex:none}
+  .vfind{font-size:14px;padding:8px 10px;border-radius:10px;border-width:1px}
+  .vquick{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+  .vclear{font-size:12px;text-transform:none;letter-spacing:0;margin-left:6px}
+  /* ---- Tendencia y gráfico ---- */
+  .trend{margin-top:6px;font-size:14px}
+  .trend small{color:var(--muted)}
+  .chg{font-weight:800;font-variant-numeric:tabular-nums}
+  .chg.up,.p .up{color:var(--good)} .chg.down,.p .down{color:var(--bad)}
+  .chart{margin-top:6px}
+  .chart svg{width:100%;height:74px;display:block;overflow:visible}
+  .chart .ln{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+  .chart .area{fill:var(--accent);opacity:.12}
+  .chart.down .ln{stroke:var(--bad)} .chart.down .area{fill:var(--bad)}
+  .chart.up .ln{stroke:var(--good)} .chart.up .area{fill:var(--good)}
+  .chart circle{fill:var(--card);stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}
+  .chart.down circle{stroke:var(--bad)} .chart.up circle{stroke:var(--good)}
+  .chart .axis{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--muted);margin-top:2px}
+  .hrange{display:flex;gap:6px;margin:8px 0 0}
+  .hrange .chip{padding:3px 9px;font-size:12px}
+  .share{margin-left:6px;border:1px solid var(--line);background:var(--card);color:var(--accent);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:13px;font-weight:600}
+  .legend{font-size:12px;color:var(--muted);margin:14px 0 0;line-height:1.6}
+  .legend span{display:inline-block;margin-right:12px}
+  .legend[hidden],.legend span[hidden]{display:none}
+  .conv{text-decoration:underline dotted;text-underline-offset:3px}
+  .rng{font-size:12px;color:var(--muted);margin-top:2px}
+  /* ---- Portada: tendencias y novedades ---- */
+  .home h2{font-size:19px;margin:22px 0 8px}
+  .home h2 small{font-size:13px;color:var(--muted);font-weight:500}
+  .home .rail .tile{width:112px}
+  .home .tile .tn{font-size:12px;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .home .tile .tp small{font-weight:700}
+  .home .sets{display:flex;flex-wrap:wrap;gap:6px}
+  .home .note{margin:4px 0 0}
+  /* ---- Colección: cambio de precio y alertas ---- */
+  .alert{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:14px}
+  .alert input{flex:none;width:96px;font-size:15px;padding:6px 8px;border-radius:8px;border-width:1px}
+  .alert .hit{color:var(--good);font-weight:700}
+  .mrow .bell{color:var(--good);font-weight:700}
+  @media (max-width:640px){ h1{font-size:26px} h1 .logo{width:84px;height:84px} .vtools{flex-direction:column} .vtools select{width:100%} .result{grid-template-columns:1fr} .pic{max-width:280px;margin:0 auto;width:100%} .big .val{font-size:34px} }
 </style>
 </head>
 <body>
@@ -241,11 +305,14 @@
     <div class="gmenu" id="tabs" role="listbox"></div>
   </div>
 
-  <form id="form">
-    <input id="q" autocomplete="off" data-tp="Código o nombre de la carta">
-    <button type="button" class="cam" id="camBtn" data-tt="Escanear con la cámara">📷</button>
-    <button class="go" data-t="Buscar"></button>
-  </form>
+  <div class="sbox">
+    <form id="form">
+      <input id="q" autocomplete="off" data-tp="Código o nombre de la carta" role="combobox" aria-autocomplete="list" aria-controls="sug" aria-expanded="false">
+      <button type="button" class="cam" id="camBtn" data-tt="Escanear con la cámara">📷</button>
+      <button class="go" data-t="Buscar"></button>
+    </form>
+    <div class="sug" id="sug" role="listbox" hidden></div>
+  </div>
 
   <!-- Ventana del escáner -->
   <div class="scan" id="scan">
@@ -268,8 +335,8 @@
   <footer data-t="Precios: Cardmarket (guía de precios pública) · TCGplayer · tcgdex.net · ygoprodeck.com · scryfall.com · Torekakaku — orientativos."></footer>
 </div>
 
-<script src="i18n-keys.js?v=14"></script>
-<script src="i18n.js?v=14"></script>
+<script src="i18n-keys.js?v=15"></script>
+<script src="i18n.js?v=15"></script>
 <script src="guias.js?v=5"></script>
 <script src="como-se-usa.js?v=5"></script>
 <script src="centrado.js?v=1"></script>
@@ -347,27 +414,44 @@ document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   if (game === t.dataset.game) return;
   game = t.dataset.game;
   try { localStorage.setItem('juego', game); } catch (e) {}
-  showGame(); out.innerHTML = ''; backStack = []; $('q').value = ''; showHelp(); $('q').focus();
+  showGame(); out.innerHTML = ''; backStack = []; current = null; $('q').value = ''; showHelp(); foldHelp(false); $('q').focus();
+  if (window.goHome) window.goHome(); // portada del juego y dirección sin búsqueda (extras.js)
   if (GAMES[game].type === 'local') loadLocal(game).catch(() => {}); // precarga
 });
 showGame();
 
 function showHelp(){
   const g = GAMES[game];
-  $('help').innerHTML = T(g.help) + '<br>' + T('Ejemplos:') + ' ' + g.ex.map(e => `<span class="ex">${e}</span>`).join('') +
+  $('help').innerHTML = `<button class="hfold" id="hfold">ℹ️ ${T('Ayuda, ejemplos y guías')} ▾</button><div class="hbody">` +
+    T(g.help) + '<br>' + T('Ejemplos:') + ' ' + g.ex.map(e => `<span class="ex">${e}</span>`).join('') +
     `<br><button class="gbtn" id="gbtn">${T('📖 Cómo se juega a {0}', g.label)}</button>` +
     (g.type !== 'links' && !g.noSealed ? ` <button class="gbtn" id="sbtn">${T('📦 Cajas selladas')}</button>` : '') +
-    ` <button class="gbtn" id="cbtn">${T('📐 Centrado PSA')}</button>`;
+    ` <button class="gbtn" id="cbtn">${T('📐 Centrado PSA')}</button></div>`;
+  $('hfold').onclick = () => foldHelp(false);
   $('gbtn').onclick = () => { backStack = []; current = null; showGuide(game); };
   if ($('sbtn')) $('sbtn').onclick = () => { backStack = []; current = null; showSealed(game); };
   $('cbtn').onclick = () => { backStack = []; current = null; showCentering(); };
   $('help').querySelectorAll('.ex').forEach(el => el.onclick = () => { $('q').value = el.textContent; search(); });
 }
 $('form').onsubmit = e => { e.preventDefault(); search(); };
+// La ayuda se pliega cuando hay resultados en pantalla, para que se vean sin bajar
+function foldHelp(on){ $('help').classList.toggle('folded', !!on); }
 
 // ===================== UTILIDADES =====================
+// ---- Moneda: se puede ver todo en la moneda original, en euros o en dólares ----
+// FX = euros que vale 1 unidad de cada moneda. Se actualiza con el cambio del BCE (frankfurter.app).
+const FX = { EUR: 1, USD: 0.92, JPY: 0.0061, date: null };
+const USD_EUR = () => FX.USD;
+let CUR = (() => { try { const c = localStorage.getItem('moneda'); return ['EUR', 'USD'].includes(c) ? c : 'orig'; } catch (e) { return 'orig'; } })();
+const fmtMoney = (v, cur, d) => new Intl.NumberFormat(LOCALE(), { style: 'currency', currency: cur, minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
+const money = (v, cur, d = 2) => {
+  if (v == null || v === '' || Number(v) === 0) return null;
+  const orig = fmtMoney(Number(v), cur, d);
+  if (CUR === 'orig' || CUR === cur || !FX[cur]) return orig;
+  // convertido: se marca con un subrayado de puntos y el precio original en el título
+  return `<span class="conv" data-o="${orig}" title="${T('Convertido de {0}', orig)}">${fmtMoney(Number(v) * FX[cur] / FX[CUR], CUR, 2)}</span>`;
+};
 const usd = v => money(v, 'USD');
-const money = (v, cur, d = 2) => (v == null || v === '' || Number(v) === 0) ? null : new Intl.NumberFormat(LOCALE(), { style: 'currency', currency: cur, minimumFractionDigits: d, maximumFractionDigits: d }).format(Number(v));
 const eur = v => money(v, 'EUR');
 const fecha = d => d ? new Date(d).toLocaleDateString(LOCALE()) : '';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -446,36 +530,75 @@ function jump(i){
   drawCurrent();
 }
 
-// Selector de rareza / versión: botones con cada rareza + desplegable con todas las versiones
+// Orden y filtro de las versiones (lo usan el selector y las flechas ‹ ›)
+function versionOrder(labels, vf){
+  const qn = normName(vf?.q || '');
+  const ks = labels.map((l, k) => k).filter(k => (!vf?.rar || labels[k].r === vf.rar) &&
+    (!qn || normName([labels[k].t, labels[k].r].join(' ')).includes(qn)));
+  const num = k => labels[k].n ?? null;
+  if (vf?.sort === 'hi') ks.sort((a, b) => (num(b) ?? -1) - (num(a) ?? -1));
+  else if (vf?.sort === 'lo') ks.sort((a, b) => (num(a) ?? 1e12) - (num(b) ?? 1e12));
+  else if (vf?.sort === 'code') ks.sort((a, b) => String(labels[a].t).localeCompare(String(labels[b].t), 'en', { numeric: true }));
+  return ks;
+}
+// Selector de versión: ordenar, filtrar por rareza o texto, saltar a la más cara / más barata,
+// carrusel con las versiones que pasan el filtro y desplegable con todas.
+// El estado del filtro se guarda en current.vf para que no se pierda al cambiar de versión.
 function drawPicker(){
   const box = $('vpick'); if (!box || !current) return;
   const n = current.items.length, i = current.index;
   if (n < 2) { box.innerHTML = ''; return; }
   const labels = current.items.map(current.label);
+  const vf = current.vf ||= { sort: 'orig', rar: '', q: '' };
   const rars = [];
   labels.forEach((l, k) => { if (l.r && !rars.some(x => x.r === l.r)) rars.push({ r: l.r, k, count: 0 }); });
   labels.forEach(l => { const x = rars.find(x => x.r === l.r); if (x) x.count++; });
-  const curR = labels[i].r;
+  if (vf.rar && !rars.some(x => x.r === vf.rar)) vf.rar = '';
+  let ks = versionOrder(labels, vf);
+  const num = k => labels[k].n ?? null;
+  const priced = labels.map((l, k) => k).filter(k => num(k) != null);
+  const kMax = priced.length ? priced.reduce((a, b) => num(b) > num(a) ? b : a) : -1;
+  const kMin = priced.length ? priced.reduce((a, b) => num(b) < num(a) ? b : a) : -1;
+  const opt = (v, t) => `<option value="${v}"${vf.sort === v ? ' selected' : ''}>${T(t)}</option>`;
+  const filtered = ks.length !== n;
   box.innerHTML = `
-    <p class="lbl2">${T('Desliza para ver todas las versiones ({0})', n)}</p>
-    <div class="rail" id="rail">${labels.map((l, k) =>
-      `<button class="tile${k === i ? ' on' : ''}${l.rep ? ' rep' : ''}" data-k="${k}" title="${esc([l.t, l.r].filter(Boolean).join(' · '))}">
+    <div class="vtools">
+      <select id="vsort" aria-label="${T('Ordenar')}">${opt('orig', 'Orden original')}${opt('hi', 'Más caras primero')}${opt('lo', 'Más baratas primero')}${opt('code', 'Por código')}</select>
+      <input id="vfind" class="vfind" value="${esc(vf.q)}" placeholder="${T('Filtrar por expansión o código')}" autocomplete="off">
+    </div>
+    ${priced.length > 1 ? `<div class="vquick">
+      <button class="chip${i === kMax ? ' on' : ''}" id="vmax">💎 ${T('La más cara')} · ${labels[kMax].p || ''}</button>
+      <button class="chip${i === kMin ? ' on' : ''}" id="vmin">🪙 ${T('La más barata')} · ${labels[kMin].p || ''}</button></div>` : ''}
+    <p class="lbl2">${filtered ? T('{0} de {1} versiones', ks.length, n) + ` <button class="link vclear" id="vclear">✕ ${T('Quitar filtros')}</button>` : T('Desliza para ver todas las versiones ({0})', n)}</p>
+    ${ks.length ? `<div class="rail" id="rail">${ks.map(k => { const l = labels[k];
+      return `<button class="tile${k === i ? ' on' : ''}${l.rep ? ' rep' : ''}" data-k="${k}" title="${esc([l.t, l.r].filter(Boolean).join(' · '))}">
         ${l.i ? `<img src="${l.i}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}
-        <span class="tr">${esc(l.r || '—')}</span><span class="tp">${l.p || '·'}</span></button>`).join('')}</div>
-    ${rars.length > 1 && rars.length <= 20 ? `<p class="lbl2">${T('Todas las rarezas de esta carta ({0})', rars.length)}</p><div class="chips">${rars.map(x =>
-      `<button class="chip${x.r === curR ? ' on' : ''}" data-r="${esc(x.r)}">${esc(x.r)}${x.count > 1 ? `<small>×${x.count}</small>` : ''}</button>`).join('')}</div>` : ''}
+        <span class="tr">${esc(l.r || '—')}</span><span class="tp">${l.p || '·'}</span></button>`; }).join('')}</div>`
+      : `<p class="note">${T('Ninguna versión coincide con el filtro.')}</p>`}
+    ${rars.length > 1 ? `<p class="lbl2">${T('Todas las rarezas de esta carta ({0})', rars.length)}</p>
+      ${rars.length <= 24 ? `<div class="chips"><button class="chip${!vf.rar ? ' on' : ''}" data-r="">${T('Todas')}</button>${rars.map(x =>
+        `<button class="chip${x.r === vf.rar ? ' on' : ''}" data-r="${esc(x.r)}">${esc(x.r)}${x.count > 1 ? `<small>×${x.count}</small>` : ''}</button>`).join('')}</div>`
+      : `<select id="vrar"><option value="">${T('Todas')}</option>${rars.map(x => `<option${x.r === vf.rar ? ' selected' : ''}>${esc(x.r)}</option>`).join('')}</select>`}` : ''}
     <p class="lbl2">${T('Elige la versión')}</p>
-    <select id="vsel">${labels.map((l, k) =>
-      `<option value="${k}"${k === i ? ' selected' : ''}>${k + 1}. ${esc([l.t, l.r && !String(l.t).includes(l.r) ? l.r : ''].filter(Boolean).join(' · '))}${l.p ? ' — ' + l.p : ''}</option>`).join('')}</select>`;
-  box.querySelectorAll('.chip').forEach(b => b.onclick = () => {
-    const r = b.dataset.r;
-    const ks = labels.map((l, k) => l.r === r ? k : -1).filter(k => k >= 0);
-    // si ya estás en esa rareza, pasa a la siguiente versión de la misma rareza
-    const next = curR === r ? ks[(ks.indexOf(i) + 1) % ks.length] : ks[0];
-    jump(next);
-  });
+    <select id="vsel">${(ks.includes(i) ? ks : [i, ...ks]).map(k => { const l = labels[k];
+      return `<option value="${k}"${k === i ? ' selected' : ''}>${k + 1}. ${esc([l.t, l.r && !String(l.t).includes(l.r) ? l.r : ''].filter(Boolean).join(' · '))}${l.p ? ' — ' + l.p : ''}</option>`; }).join('')}</select>`;
+  const setRar = r => {
+    vf.rar = r;
+    const inR = k => !r || labels[k].r === r;
+    if (r && !inR(i)) { const first = ks.find(inR) ?? labels.findIndex(l => l.r === r); if (first >= 0) return jump(first); }
+    drawPicker();
+  };
+  box.querySelectorAll('.chips .chip').forEach(b => b.onclick = () => setRar(b.dataset.r === vf.rar ? '' : b.dataset.r));
+  if ($('vrar')) $('vrar').onchange = e => setRar(e.target.value);
+  $('vsort').onchange = e => { vf.sort = e.target.value; drawPicker(); };
+  const f = $('vfind');
+  f.oninput = () => { clearTimeout(f._t); f._t = setTimeout(() => { vf.q = f.value; drawPicker(); const g = $('vfind'); g.focus(); g.setSelectionRange(g.value.length, g.value.length); }, 250); };
+  if ($('vclear')) $('vclear').onclick = () => { vf.rar = ''; vf.q = ''; drawPicker(); };
+  if ($('vmax')) $('vmax').onclick = () => jump(kMax);
+  if ($('vmin')) $('vmin').onclick = () => jump(kMin);
   $('vsel').onchange = e => jump(Number(e.target.value));
   const rail = $('rail');
+  if (!rail) return;
   rail.querySelectorAll('.tile').forEach(b => b.onclick = () => jump(Number(b.dataset.k)));
   // la carrusel no debe disparar el cambio de versión al deslizarla
   rail.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
@@ -487,7 +610,12 @@ function drawPicker(){
 async function go(step){
   if (!current || current.items.length < 2) return;
   slideDir = step;
-  current.index = (current.index + step + current.items.length) % current.items.length;
+  // con filtro u orden activo, las flechas recorren las versiones en ese orden
+  const ks = current.vf ? versionOrder(current.items.map(current.label), current.vf) : null;
+  if (ks && ks.length) {
+    const p = ks.indexOf(current.index);
+    current.index = ks[p < 0 ? (step > 0 ? 0 : ks.length - 1) : (p + step + ks.length) % ks.length];
+  } else current.index = (current.index + step + current.items.length) % current.items.length;
   const pic = out.querySelector('.pic'); if (pic) pic.classList.add('loading');
   await drawCurrent();
 }
@@ -531,17 +659,20 @@ function render(v){
         ${v.subname ? `<p class="meta">${esc(v.subname)}</p>` : ''}
         <p class="meta">${v.meta}</p>
         ${v.rarity ? `<span class="rar">✦ ${esc(v.rarity)}</span>` : ''}
-        <div class="picker" id="vpick"></div>
         <div class="big"><div class="lbl">${T(v.mainLabel)}</div><div class="val">${v.mainValue || T('Sin precio')}</div>
           ${v.approx ? `<div class="approx">${T(v.approx)}</div>` : ''}
+          ${v.hist ? '<div class="trend" id="trend"></div>' : ''}
           <div class="upd">${v.updated ? esc(v.updated) + ' · ' : ''}${T('consultado a las {0}', new Date().toLocaleTimeString(LOCALE(), {hour:'2-digit', minute:'2-digit'}))}
-            ${v.reload ? `<button class="refresh" id="refresh">${T('🔄 Actualizar precio')}</button>` : ''}</div></div>
+            ${v.reload ? `<button class="refresh" id="refresh">${T('🔄 Actualizar precio')}</button>` : ''}
+            <button class="share" id="share" title="${T('Copiar el enlace de esta carta')}">🔗 ${T('Compartir')}</button></div></div>
         <div class="mine" id="mine"></div>
+        <div class="picker" id="vpick"></div>
         <table>${tr || `<tr><td>${T('No hay más precios disponibles')}</td><td></td></tr>`}</table>
         <div class="links">
           ${v.openSet ? `<button class="main" id="openSet">${T('📚 Ver la expansión entera')}</button>` : ''}
           ${v.links.filter(l => l[1]).map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${T(l[0])} ↗</a>`).join('')}
         </div>
+        ${legendHTML()}
         ${v.howto ? `<details class="howto" open><summary>${T('📖 Cómo se usa esta carta')}</summary><div id="howto"><p>${T('Cargando…')}</p></div></details>` : ''}
         ${v.sealed ? '' : gradingHTML(v.value)}
       </div>
@@ -564,6 +695,8 @@ function render(v){
   if (n > 1) { $('prev').onclick = () => go(-1); $('next').onclick = () => go(1); }
   slideDir = 0;
   drawPicker();
+  drawTrend(v); fixLegend();
+  if (window.afterRender) window.afterRender(v); // enlace de la carta en la barra de direcciones (extras.js)
   if (window.cuentaCard) window.cuentaCard(v); // botones "Mi colección" / "Favorito" (cuenta.js)
   preloadNeighbours();
   if (v.reload) $('refresh').onclick = async () => {
@@ -585,6 +718,78 @@ function render(v){
     x0 = null;
   });
 }
+// Leyenda de los símbolos de precio (solo los que aparecen en la ficha)
+function legendHTML(){
+  return `<p class="legend" id="legend"><b>ⓘ</b> <span data-l="~">${T('<b>~</b> aproximado: Cardmarket junta varias versiones de esta carta')}</span>
+    <span data-l="≈">${T('<b>≈</b> orientativo: TCGplayer no la vende o el dato es antiguo')}</span>
+    <span data-l="conv">${T('<u>subrayado de puntos</u>: convertido de otra moneda (cambio del BCE)')}</span>
+    <span data-l="▲">${T('<b>▲▼</b> cambio frente a la media de los últimos 30 días')}</span></p>`;
+}
+function fixLegend(){
+  const lg = $('legend'); if (!lg) return;
+  // los avisos (.approx) ya se explican solos; solo cuentan los símbolos de los precios
+  const r = $('result')?.cloneNode(true); r?.querySelectorAll('.approx,.legend').forEach(x => x.remove());
+  const txt = r?.textContent || '';
+  const has = { '~': /~/.test(txt), '≈': /≈/.test(txt), conv: !!$('result')?.querySelector('.conv'), '▲': /[▲▼]/.test(txt) };
+  let any = false;
+  lg.querySelectorAll('[data-l]').forEach(x => { x.hidden = !has[x.dataset.l]; any ||= has[x.dataset.l]; });
+  lg.hidden = !any;
+}
+
+// ---- Historial de precios ----
+// v.hist = { cur, now, avg30, pts: [[etiqueta, valor]…], game, id }
+// · pts: medias de Cardmarket (30 días, 7 días, 1 día, hoy) — están desde el primer día
+// · data/hist/<juego>/<id % 64>.json: precio de cada día, lo va guardando la GitHub Action
+const histCache = {};
+async function loadHist(gameKey, id){
+  if (id == null) return null;
+  const f = `data/hist/${gameKey}/${Number(id) % 64}.json`;
+  const d = await (histCache[f] ||= fetch(f).then(r => r.ok ? r.json() : null).catch(() => null));
+  const vals = d?.p?.[id];
+  if (!vals) return null;
+  return d.d.map((day, k) => ({ l: day, v: vals[k] })).filter(x => x.v > 0);
+}
+let histRange = 90;
+async function drawTrend(v){
+  const box = $('trend'); if (!box || !v.hist) return;
+  const h = v.hist, cur = h.cur || 'EUR';
+  const m = x => money(x, cur, cur === 'JPY' ? 0 : 2);
+  const now = Number(h.now) || null, a30 = Number(h.avg30) || null;
+  const pct = now && a30 ? (now - a30) / a30 * 100 : null;
+  const arrow = pct == null ? '' : Math.abs(pct) < 1 ? `<span class="chg">＝ ${T('estable')}</span>`
+    : `<span class="chg ${pct > 0 ? 'up' : 'down'}">${pct > 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(pct > 10 || pct < -10 ? 0 : 1)} %</span> <small>${T('vs. media 30 días ({0})', m(a30))}</small>`;
+  const avg = (h.pts || []).filter(p => Number(p[1]) > 0).map(([l, x]) => ({ l: T(l), v: Number(x) }));
+  box.innerHTML = arrow + (avg.length > 1 ? chartSVG(avg, m) : '');
+  fixLegend();
+  const daily = await loadHist(h.game, h.id);
+  if (!daily || daily.length < 3 || box !== $('trend')) return;
+  const draw = () => {
+    const pts = daily.slice(-histRange).map(x => ({ l: fecha(x.l), v: x.v }));
+    box.innerHTML = arrow + `<div class="hrange">${[[30, '30 días'], [90, '90 días'], [9999, 'Todo']].map(([d, t]) =>
+      `<button class="chip${histRange === d ? ' on' : ''}" data-d="${d}">${T(t)}</button>`).join('')}</div>` + chartSVG(pts, m);
+    box.querySelectorAll('.hrange .chip').forEach(b => b.onclick = () => { histRange = Number(b.dataset.d); draw(); });
+    fixLegend();
+  };
+  draw();
+}
+// Gráfico de línea sencillo (SVG). pts = [{ l: etiqueta, v: valor }]
+function chartSVG(pts, m){
+  const W = 300, H = 74, P = 6;
+  const vs = pts.map(p => p.v), lo = Math.min(...vs), hi = Math.max(...vs), span = hi - lo || hi * 0.1 || 1;
+  const x = k => P + (W - 2 * P) * (pts.length === 1 ? 0.5 : k / (pts.length - 1));
+  const y = v => P + (H - 2 * P) * (1 - (v - lo) / span);
+  const line = pts.map((p, k) => `${x(k).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
+  const up = vs[vs.length - 1] >= vs[0];
+  const plain = h => String(h).replace(/<[^>]+>/g, '');
+  return `<div class="chart ${up ? 'up' : 'down'}">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${T('Evolución del precio')}">
+      <polygon points="${x(0)},${H} ${line} ${x(pts.length - 1)},${H}" class="area"/>
+      <polyline points="${line}" class="ln"/>
+      ${pts.length <= 40 ? pts.map((p, k) => `<circle cx="${x(k)}" cy="${y(p.v)}" r="3"><title>${esc(p.l)}: ${plain(m(p.v))}</title></circle>`).join('') : ''}
+    </svg>
+    <div class="axis"><span>${esc(pts[0].l)}</span><span>${T('mín.')} ${m(lo)} · ${T('máx.')} ${m(hi)}</span><span>${esc(pts[pts.length - 1].l)}</span></div></div>`;
+}
+
 // precarga las imágenes de la versión anterior y siguiente para que el cambio sea instantáneo
 function preloadNeighbours(){
   if (!current || current.items.length < 2) return;
@@ -599,19 +804,22 @@ document.addEventListener('keydown', e => {
 
 // Rejilla de cartas (resultados de búsqueda o expansión entera)
 // items: [{ img, title, sub, price, open }]
-function renderGrid(title, items, { sort } = {}){
+function renderGrid(title, items, { sort, rel } = {}){
   const draw = list => {
     redraw = () => $('q').value.trim() ? search() : (out.innerHTML = ''); // al cambiar idioma se vuelve a buscar
     out.innerHTML = `${backBtn()}
       <div class="bar"><h2>${title}</h2>
-        ${sort ? `<select id="sort"><option value="num">${T('Ordenar por número')}</option><option value="hi">${T('Más caras primero')}</option><option value="lo">${T('Más baratas primero')}</option></select>` : ''}
+        ${sort ? `<select id="sort"><option value="num">${T(rel ? 'Más relevantes primero' : 'Ordenar por número')}</option><option value="hi">${T('Más caras primero')}</option><option value="lo">${T('Más baratas primero')}</option></select>` : ''}
       </div>
       <div class="list">${list.map((it, k) => `<div class="item${it.real ? ' rep' : ''}" data-k="${k}">
           <img src="${it.img || ''}" loading="lazy" alt="">
           <div>${esc(it.title)}</div>${it.sub ? `<div class="note">${esc(it.sub)}</div>` : ''}
-          ${it.price ? `<div class="p">${it.price}</div>` : ''}</div>`).join('')}</div>`;
+          ${it.price ? `<div class="p">${it.price}</div>` : ''}
+          ${it.range ? `<div class="rng">${it._rng || ''}</div>` : ''}</div>`).join('')}</div>`;
     wireBack();
     lazyReal(list);
+    lazyRange(list);
+    if (window.afterGrid) window.afterGrid();
     out.querySelectorAll('.item').forEach(el => el.onclick = () => {
       remember(() => draw(list));
       list[el.dataset.k].open();
@@ -624,9 +832,28 @@ function renderGrid(title, items, { sort } = {}){
   let sortMode = 'num';
   setTimeout(toTop);
   const sorted = () => sortMode === 'num' ? items : [...items].sort((a, b) =>
-    sortMode === 'hi' ? (b.v ?? -1) - (a.v ?? -1) : (a.v ?? 1e9) - (b.v ?? 1e9));
+    sortMode === 'hi' ? (b.vmax ?? b.v ?? -1) - (a.vmax ?? a.v ?? -1) : (a.v ?? 1e9) - (b.v ?? 1e9));
   draw(items);
 }
+
+// Rango de precios de todas las versiones de cada resultado ("0,02 € – 532 € · 85 versiones").
+// it.range = async () => { lo, hi, n } (en €)
+function lazyRange(list){
+  const els = [...out.querySelectorAll('.item')].filter(el => list[el.dataset.k]?.range && !list[el.dataset.k]._rng);
+  if (!els.length) return;
+  const queue = []; let busy = 0;
+  const show = (el, it) => { const x = el.isConnected ? el.querySelector('.rng') : null; if (x) x.innerHTML = it._rng; };
+  const pump = () => { while (busy < 4 && queue.length) { const el = queue.shift(), it = list[el.dataset.k]; busy++;
+    Promise.resolve().then(it.range).then(r => {
+      if (!r) return;
+      if (r.hi != null) it.vmax = r.hi;
+      it._rng = (r.lo != null ? (r.hi > r.lo * 1.01 ? `${eur(r.lo)} – ${eur(r.hi)}` : eur(r.lo)) + ' · ' : '') + T('{0} versiones', r.n);
+      show(el, it);
+    }).catch(() => {}).finally(() => { busy--; pump(); }); } };
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); queue.push(e.target); pump(); } }), { rootMargin: '300px' });
+  els.forEach(el => io.observe(el));
+}
+const rangeOf = (vals, n) => { vals = vals.filter(v => v > 0); return { lo: vals.length ? Math.min(...vals) : null, hi: vals.length ? Math.max(...vals) : null, n }; };
 
 // Cambia la imagen de referencia por la foto real cuando la tarjeta aparece en pantalla.
 // it.real = async () => url | null
@@ -646,6 +873,8 @@ async function search(){
   const q = $('q').value.trim();
   if (!q) return;
   backStack = []; current = null;
+  foldHelp(true);
+  if (window.onSearch) window.onSearch(q); // guarda la búsqueda en la dirección de la página (extras.js)
   loading();
   try {
     const g = GAMES[game];
@@ -717,7 +946,7 @@ async function openPokemon(c){
   others = others.slice(-60);
   const idx = others.findIndex(o => o.id === c.id);
   const label = o => { const f = pkmCache[o.id];
-    return f ? { r: f.rarity, t: `${f.set?.name} · ${f.localId}`, p: eur(f.pricing?.cardmarket?.trend), i: pkmImg(f, 'low') } : { r: '', t: o.id, i: pkmImg(o, 'low') }; };
+    return f ? { r: f.rarity, t: `${f.set?.name} · ${f.localId}`, p: eur(f.pricing?.cardmarket?.trend), n: Number(f.pricing?.cardmarket?.trend) || null, i: pkmImg(f, 'low') } : { r: '', t: o.id, i: pkmImg(o, 'low') }; };
   await showVersions(others, idx, async o => {
     const full = pkmCache[o.id] || (pkmCache[o.id] = await getJSON(`${PKM}/cards/${o.id}`));
     return pokemonView(full);
@@ -751,7 +980,7 @@ function pokemonView(c){
   const main = cm.trend || cm.avg;
   const firstTp = Object.values(tp).find(p => p && typeof p === 'object');
   return {
-    img: pkmImg(c, 'high'), name: c.name, rarity: c.rarity,
+    img: pkmImg(c, 'high'), name: c.name, rarity: c.rarity, deepQ: c.id,
     versionLabel: `${c.set?.name || ''} · ${c.localId}`,
     meta: `${esc(c.set?.name)} · Nº ${esc(c.localId)}/${esc(c.set?.cardCount?.official ?? '?')}`,
     mainLabel: main ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
@@ -763,6 +992,8 @@ function pokemonView(c){
     reload: async () => { pkmCache[c.id] = await getJSON(`${PKM}/cards/${c.id}`); drawCurrent(); },
     openSet: c.set?.id ? () => openPokemonSet(c.set.id) : null,
     howto: () => howtoPokemon(c.id),
+    hist: cm.trend || cm.avg ? { cur: 'EUR', now: main, avg30: cm.avg30,
+      pts: [['Media 30 días', cm.avg30], ['Media 7 días', cm.avg7], ['Media último día', cm.avg1], ['Hoy', main]] } : null,
   };
 }
 
@@ -922,7 +1153,10 @@ async function searchYugioh(q){
   renderGrid(T('{0} resultados', cards.length), cards.slice(0, 80).map(c => ({
     img: c.card_images?.[0]?.image_url_small, title: hit[c.id]?.name || c.name, sub: hit[c.id] ? c.name : '',
     real: () => ygoRealImg(c, c.card_sets?.[0]?.set_code, c.card_sets?.[0]?.set_rarity, true).then(u => u || ygoRealImg(c, null, null, true)),
-    price: eur(c.card_prices?.[0]?.cardmarket_price), open: () => openYugioh(c, null, null, loc(c)) })));
+    price: eur(c.card_prices?.[0]?.cardmarket_price), v: Number(c.card_prices?.[0]?.cardmarket_price) || null,
+    range: async () => { const vers = ygoVersions(c, await ygoPrints(c.name));
+      return rangeOf(vers.map(s => s.prints?.length ? shownPrice(s.prints)?.n : Number(s.set_price) * USD_EUR()), vers.length); },
+    open: () => openYugioh(c, null, null, loc(c)) })), { sort: true, rel: true });
 }
 
 // ---- Precio de TCGplayer de cada impresión (lo descarga cada día la GitHub Action en data/ygo/) ----
@@ -974,7 +1208,7 @@ const shownPrice = prints => {
   const e = (prints || []).map(x => x.e).filter(Boolean);
   if (e.length) { const v = Math.min(...e); return { t: ((prints || []).some(x => x.ea) ? '~' : '') + eur(v), n: v, e: true }; }
   const u = (prints || []).map(printPrice).filter(Boolean);
-  return u.length ? { t: usd(Math.min(...u)), n: Math.min(...u) * 0.92 } : null;
+  return u.length ? { t: usd(Math.min(...u)), n: Math.min(...u) * USD_EUR() } : null;
 };
 // impresiones de TCGplayer con ese código y rareza
 function printsFor(pr, s){
@@ -1011,7 +1245,7 @@ async function openYugioh(c, code, rarity, local = null, variant = null){
   return showVersions(items, idx < 0 ? 0 : idx, async s => yugiohView(c, s, realLoc(s) || (!s && pickScan(scans, null, null)),
       s && !locCode(s) ? scanGroup(scans, s.set_code, s.set_rarity) : [], pr, { names: locNames, lang: local?.lang, code: locCode(s) }),
     s => { const x = real(s); const i = x ? ygpThumb(x.url) : c.card_images?.[0]?.image_url_small;
-      return s ? { r: s.set_rarity, t: s.set_code + (s.variant ? ' · ' + s.variant : ''), p: s.prints?.length ? (shownPrice(s.prints)?.t || '') : (Number(s.set_price) ? '≈ ' + usd(s.set_price) : ''), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
+      return s ? { r: s.set_rarity, t: s.set_code + (s.variant ? ' · ' + s.variant : ''), p: s.prints?.length ? (shownPrice(s.prints)?.t || '') : (Number(s.set_price) ? '≈ ' + usd(s.set_price) : ''), n: s.prints?.length ? (shownPrice(s.prints)?.n ?? null) : (Number(s.set_price) * USD_EUR() || null), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
 }
 
 function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
@@ -1049,7 +1283,7 @@ function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
   const se = chosen?.e || null; // Cardmarket manda
   const approx = !sp && set && Number(set.set_price) ? Number(set.set_price) : null; // TCGplayer no la vende: dato orientativo
   return {
-    img: scan?.url || c.card_images?.[0]?.image_url, replica: !scan, name: locName || c.name, subname: locName && locName !== c.name ? c.name : '', rarity: set?.set_rarity,
+    img: scan?.url || c.card_images?.[0]?.image_url, replica: !scan, deepQ: loc.code || set?.set_code || c.name, name: locName || c.name, subname: locName && locName !== c.name ? c.name : '', rarity: set?.set_rarity,
     alts,
     updated: pr && ps.length ? T(se ? 'Cardmarket del {0}' : 'TCGplayer del {0}', fecha(pr.updated)) : '',
     versionLabel: set ? `${loc.code || set.set_code} · ${set.set_rarity}${set.variant ? ' · ' + set.variant : ''}` : '',
@@ -1058,6 +1292,9 @@ function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
     mainValue: se ? eur(se) : sp ? usd(sp) : approx ? usd(approx) : set ? '' : eur(p.cardmarket_price) || usd(p.tcgplayer_price),
     approx: se && chosen.ea ? 'Cardmarket no separa bien las versiones de esta carta en esta expansión: precio aproximado.' : approx ? 'TCGplayer no vende esta impresión; dato de YGOPRODeck, puede estar desactualizado.' : set && !sp ? 'TCGplayer no tiene precio de esta impresión ahora mismo.' : '',
     value: se || sp || approx || Number(p.cardmarket_price) || null,
+    hist: se ? { cur: 'EUR', now: se, avg30: chosen.e30, game: 'yugioh', id: chosen.id,
+        pts: [['Media 30 días', chosen.e30], ['Media 7 días', chosen.e7], ['Media último día', chosen.e1], ['Hoy', se]] }
+      : sp ? { cur: 'USD', now: sp, game: 'yugioh', id: chosen.id, pts: [] } : null,
     rows,
     links: [['Cardmarket', `https://www.cardmarket.com/es/YuGiOh/Products/Search?searchString=${encodeURIComponent(c.name)}${loc.lang ? '&language=' + ({ fr: 2, de: 3, es: 4, it: 5, pt: 8 })[loc.lang] : ''}`],
             ['TCGplayer', `https://www.tcgplayer.com/search/yugioh/product?q=${encodeURIComponent(c.name)}`],
@@ -1115,7 +1352,8 @@ async function searchMagic(q){
   if (!cards.length) return error(T('No encontré esa carta. Revisa el código (ej. MH3 123) o el nombre en inglés.'));
   if (cards.length === 1) return openMagic(cards[0]);
   renderGrid(T('{0} resultados', cards.length), cards.slice(0, 80).map(c => ({
-    img: mtgImg(c, 'small'), title: c.name, price: eur(c.prices?.eur) || usd(c.prices?.usd), open: () => openMagic(c) })));
+    img: mtgImg(c, 'small'), title: c.name, price: eur(c.prices?.eur) || usd(c.prices?.usd),
+    v: Number(c.prices?.eur) || Number(c.prices?.usd) * USD_EUR() || null, open: () => openMagic(c) })), { sort: true, rel: true });
 }
 const mtgImg = (c, size) => c.image_uris?.[size] || c.card_faces?.[0]?.image_uris?.[size];
 
@@ -1127,14 +1365,14 @@ async function openMagic(c){
   } catch (e) {}
   const idx = prints.findIndex(p => p.id === c.id);
   return showVersions(prints, idx < 0 ? 0 : idx, async p => magicView(p),
-    p => ({ r: p.rarity, t: `${p.set_name} · ${p.collector_number}`, p: eur(p.prices?.eur) || usd(p.prices?.usd), i: mtgImg(p, 'small') }));
+    p => ({ r: p.rarity, t: `${p.set_name} · ${p.collector_number}`, p: eur(p.prices?.eur) || usd(p.prices?.usd), n: Number(p.prices?.eur) || Number(p.prices?.usd) * USD_EUR() || null, i: mtgImg(p, 'small') }));
 }
 
 function magicView(c){
   const p = c.prices || {};
   const main = Number(p.eur) || Number(p.usd) || Number(p.eur_foil) || Number(p.usd_foil) || null;
   return {
-    img: mtgImg(c, 'normal'), name: c.name, rarity: c.rarity,
+    img: mtgImg(c, 'normal'), name: c.name, rarity: c.rarity, deepQ: `${c.set} ${c.collector_number}`,
     versionLabel: `${c.set_name} · ${c.collector_number}`,
     meta: `${esc(c.set_name)} · ${esc(c.set.toUpperCase())} ${esc(c.collector_number)}`,
     mainLabel: p.eur ? 'Precio en Cardmarket' : 'Precio de referencia',
@@ -1220,7 +1458,7 @@ async function searchLocal(q){
   for (const c of byName) (groups[c.k1 + '|' + c.b] ||= []).push(c);
   const reps = Object.values(groups).map(g => g.sort((a, b) => (localValue(a) ?? 1e9) - (localValue(b) ?? 1e9))[0]);
   if (reps.length === 1) return openLocal(reps[0], sameCard(d, reps[0]));
-  gridLocal(T('{0} resultados', reps.length), reps);
+  gridLocal(T('{0} resultados', reps.length), reps, { sort: true, rel: true, range: true });
 }
 
 // Todas las versiones (rarezas, paralelas, alt art…) de la misma carta
@@ -1229,11 +1467,12 @@ function sameCard(d, c){
   return [...new Set(list)].sort((a, b) => (localValue(a) ?? 1e9) - (localValue(b) ?? 1e9));
 }
 
-function gridLocal(title, cards, opts){
+function gridLocal(title, cards, opts = {}){
   const d = localData[game];
   renderGrid(title, cards.slice(0, 300).map(c => ({
     img: tcgImg(c), title: c.n, sub: [c.c, c.r].filter(Boolean).join(' · '),
     price: localPrice(c), v: localValue(c),
+    range: opts.range && !d.currency ? () => { const vs = sameCard(d, c); return vs.length > 1 ? rangeOf(vs.map(x => x.e || (x.u ? x.u * USD_EUR() : null)), vs.length) : null; } : null,
     open: () => openLocal(c, sameCard(d, c)) })), opts);
 }
 
@@ -1241,25 +1480,28 @@ function openLocal(c, versions){
   const key = game;
   const idx = versions.indexOf(c);
   return showVersions(versions, idx < 0 ? 0 : idx, async x => localView(key, x),
-    x => ({ r: localRarity(x), t: x.c || x.n, p: localPrice(x), i: tcgImg(x) }));
+    x => ({ r: localRarity(x), t: x.c || x.n, p: localPrice(x), n: x.y ?? (x.e || (x.u ? x.u * USD_EUR() : null)), i: tcgImg(x) }));
 }
 
 function localView(key, c){
   const d = localData[key], g = GAMES[key], set = d.sets[c.g] || {};
   if (g.yen) return dmView(key, c, d, set);
   const rows = [['#Cardmarket (Europa)'],
-    ['Tendencia', eur(c.e)], ['Desde', eur(c.el)], ['Media 30 días', eur(c.e30)], ['Foil (tendencia)', eur(c.ef)],
+    ['Tendencia', eur(c.e)], ['Desde', eur(c.el)], ['Media último día', eur(c.e1)], ['Media 7 días', eur(c.e7)], ['Media 30 días', eur(c.e30)], ['Foil (tendencia)', eur(c.ef)],
     ['#TCGplayer (EE. UU.)'], ['Precio de mercado', usd(c.u)], ['Desde', usd(c.ul)], ['Foil', usd(c.uf)]];
   const cmLink = c.cm
     ? `https://www.cardmarket.com/es/${g.cm}/Products?idProduct=${c.cm}`
     : `https://www.cardmarket.com/es/${g.cm}/Products/Search?searchString=${encodeURIComponent(c.n.replace(/\(.*?\)/g, '').trim())}`;
   return {
-    img: tcgImg(c, true), name: c.n, rarity: localRarity(c),
+    img: tcgImg(c, true), name: c.n, rarity: localRarity(c), deepQ: c.c ? String(c.c).split(' ')[0] : c.n,
     versionLabel: [localRarity(c), c.c].filter(Boolean).join(' · '),
     meta: `${esc(set.n || '')}${c.c ? ' · ' + esc(c.c) : ''}`,
     mainLabel: c.e ? 'Precio de tendencia en Cardmarket' : 'Precio de mercado en TCGplayer',
     mainValue: localPrice(c), value: localValue(c),
     approx: c.e && c.ea ? '≈ Esta carta tiene varias versiones: comprueba en Cardmarket que sea la tuya.' : '',
+    hist: c.e ? { cur: 'EUR', now: c.e, avg30: c.e30, game: key, id: c.id,
+        pts: [['Media 30 días', c.e30], ['Media 7 días', c.e7], ['Media último día', c.e1], ['Hoy', c.e]] }
+      : c.u ? { cur: 'USD', now: c.u, game: key, id: c.id, pts: [] } : null,
     rows,
     links: [['Cardmarket', cmLink], ['TCGplayer', `https://www.tcgplayer.com/product/${c.id}`]],
     howto: () => howtoLocal(key, c),
@@ -1276,11 +1518,12 @@ function localView(key, c){
 function dmView(key, c, d, set){
   const q = encodeURIComponent(c.n);
   return {
-    img: tcgImg(c, true), name: c.n, rarity: c.r,
+    img: tcgImg(c, true), name: c.n, rarity: c.r, deepQ: c.c || c.n,
     versionLabel: [c.r, c.c].filter(Boolean).join(' · '),
     meta: `${esc(set.n || '')}${c.c ? ' · ' + esc(c.c) : ''}`,
     mainLabel: 'Precio de venta en Japón (Torekakaku)',
     mainValue: yen(c.y), value: null,
+    hist: c.y ? { cur: 'JPY', now: c.y, game: key, id: c.id, pts: [] } : null,
     rows: [['#Torekakaku (Japón)'], ['Precio de venta', yen(c.y)]],
     links: [['Torekakaku', `https://torekakaku.com/dm/card/?cardid=${c.id}`],
             ['Yuyu-tei', `https://yuyu-tei.jp/sell/dm/s/search?search_word=${q}`],
@@ -1530,7 +1773,9 @@ document.querySelectorAll('#lmenu button').forEach(b => b.onclick = () => {
 applyLang();
 if (LANG !== 'es') loadLang(LANG).then(() => { applyLang(); if (redraw) redraw(); });
 </script>
+<!-- Autocompletar, enlaces de cada carta, portada con tendencias, moneda y modo oscuro -->
+<script src="extras.js?v=1"></script>
 <!-- Cuentas de usuario: Mi colección y Favoritos (Firebase) -->
-<script type="module" src="cuenta.js?v=2"></script>
+<script type="module" src="cuenta.js?v=3"></script>
 </body>
 </html>

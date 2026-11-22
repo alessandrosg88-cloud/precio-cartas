@@ -39,6 +39,7 @@ function drawAcct(){
   menu.innerHTML = `<div class="who">${esc(nm)}</div>
     <button data-a="col">📚 ${T('Mi colección')} (${cols.filter(i => i.qty > 0).length})</button>
     <button data-a="fav">⭐ ${T('Favoritos')} (${cols.filter(i => i.fav).length})</button>
+    ${cols.some(i => i.alert) ? `<button data-a="alert">🔔 ${T('Alertas de precio')} (${cols.filter(hitAlert).length}/${cols.filter(i => i.alert).length})</button>` : ''}
     <button data-a="out">🚪 ${T('Salir')}</button>`;
   menu.querySelectorAll('button').forEach(b => b.onclick = () => {
     menu.classList.remove('open');
@@ -111,7 +112,9 @@ onAuthStateChanged(auth, u => {
 });
 
 // ---------- La carta que se está viendo ----------
-const plain = h => { const d = document.createElement('div'); d.innerHTML = h || ''; return d.textContent.trim(); };
+// texto sin HTML; si el precio se ve convertido a otra moneda, se guarda el original (data-o)
+const plain = h => { const d = document.createElement('div'); d.innerHTML = h || '';
+  d.querySelectorAll('.conv[data-o]').forEach(x => x.replaceWith(x.dataset.o)); return d.textContent.trim(); };
 const curOf = txt => /€/.test(txt) ? 'EUR' : /¥|円/.test(txt) ? 'JPY' : /\$/.test(txt) ? 'USD' : '';
 function cardFrom(v){
   const label = v.versionLabel || '';
@@ -129,7 +132,9 @@ const idOf = c => (c.game + '|' + c.name + '|' + c.label).replace(/\//g, '∕').
 async function save(c, patch){
   const id = idOf(c), old = items.get(id) || {};
   const data = { ...old, ...c, qty: old.qty || 0, fav: !!old.fav, ...patch, updated: serverTimestamp() };
-  if (!data.qty && !data.fav) return deleteDoc(doc(db, 'users', user.uid, 'items', id));
+  // precio cuando la guardaste (para ver cuánto ha subido o bajado desde entonces)
+  if (data.v0 == null && c.value) { data.v0 = c.value; data.cur0 = c.cur; }
+  if (!data.qty && !data.fav && !data.alert) return deleteDoc(doc(db, 'users', user.uid, 'items', id));
   return setDoc(doc(db, 'users', user.uid, 'items', id), data);
 }
 
@@ -148,7 +153,16 @@ function drawMine(){
   box.innerHTML = `${qty
       ? `<span class="qty"><span>${T('En tu colección: {0}', '')}</span><button data-q="-1" aria-label="−">−</button><b>${qty}</b><button data-q="1" aria-label="+">+</button></span>`
       : `<button class="gbtn" data-q="1">${T('➕ Añadir a mi colección')}</button>`}
-    <button class="gbtn soft${it?.fav ? ' on' : ''}" data-f="1">${it?.fav ? T('★ En favoritos') : T('☆ Añadir a favoritos')}</button>`;
+    <button class="gbtn soft${it?.fav ? ' on' : ''}" data-f="1">${it?.fav ? T('★ En favoritos') : T('☆ Añadir a favoritos')}</button>
+    ${lastCard.value && lastCard.cur ? `<span class="alert">🔔 ${T('Avísame si baja de')}
+      <input type="number" min="0" step="0.01" inputmode="decimal" id="alertv" value="${it?.alert ?? ''}" placeholder="${(lastCard.value * 0.8).toFixed(2)}"> ${lastCard.cur === 'EUR' ? '€' : lastCard.cur === 'USD' ? 'US$' : '¥'}
+      ${it?.alert && lastCard.value <= it.alert ? `<span class="hit">✅ ${T('¡Ya está por debajo de tu precio!')}</span>` : ''}</span>` : ''}`;
+  const av = $('alertv');
+  if (av) av.onchange = () => {
+    if (!user) { av.value = ''; return openLogin(T('Entra para guardar cartas en tu colección.')); }
+    const n = Number(String(av.value).replace(',', '.'));
+    save(lastCard, { alert: n > 0 ? n : null });
+  };
   box.querySelectorAll('[data-q]').forEach(b => b.onclick = () => {
     if (!user) return openLogin(T('Entra para guardar cartas en tu colección.'));
     save(lastCard, { qty: Math.max(0, qty + Number(b.dataset.q)) });
@@ -159,55 +173,86 @@ function drawMine(){
   };
 }
 
+const hitAlert = i => i.alert && i.value && i.value <= i.alert;
+// cambio de precio desde que la guardaste
+const sinceTxt = i => { if (!i.v0 || !i.value || (i.cur0 && i.cur0 !== i.cur)) return '';
+  const p = (i.value - i.v0) / i.v0 * 100; if (Math.abs(p) < 1) return '';
+  return ` · <span class="chg ${p > 0 ? 'up' : 'down'}">${p > 0 ? '▲' : '▼'} ${Math.abs(p).toFixed(0)} %</span> ${T('desde que la guardaste')}`; };
+// Descarga la lista en CSV (se abre con Excel, Numbers o Google Sheets)
+function downloadCSV(list, view){
+  const q = v => { const t = String(v ?? ''); return /[";\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  const num = v => v == null ? '' : String(v).replace('.', ',');
+  const head = ['Juego', 'Carta', 'Versión', 'Expansión', 'Rareza', 'Cantidad', 'Precio', 'Moneda', 'Valor total', 'Precio al guardarla', 'Favorito', 'Alerta (baja de)'];
+  const rows = list.map(i => [GAMES[i.game]?.label || i.game, i.name, i.label, i.set, i.rarity, i.qty || 0, num(i.value), i.cur,
+    num(i.value ? Math.round(i.value * Math.max(1, i.qty || 0) * 100) / 100 : null), num(i.v0), i.fav ? 'sí' : '', num(i.alert)]);
+  const csv = '\ufeff' + [head, ...rows].map(r => r.map(q).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `${view === 'fav' ? 'favoritos' : view === 'alert' ? 'alertas' : 'coleccion'}-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
 // ---------- Pantalla "Mi colección" / "Favoritos" ----------
 let mineView = null, groupBy = 'set', gameFilter = 'all';
 function showMine(view, keep){
   if (!keep) { backStack = []; current = null; window.scrollTo({ top: out.offsetTop - 10 }); }
   mineView = view;
   redraw = () => showMine(mineView, true);
-  const all = [...items.values()].filter(i => view === 'fav' ? i.fav : i.qty > 0);
+  const all = [...items.values()].filter(i => view === 'fav' ? i.fav : view === 'alert' ? i.alert : i.qty > 0);
   const games = [...new Set(all.map(i => i.game))];
   if (gameFilter !== 'all' && !games.includes(gameFilter)) gameFilter = 'all';
   const list = all.filter(i => gameFilter === 'all' || i.game === gameFilter);
   // valor total por moneda
   const tot = {};
-  for (const i of list) if (i.value && i.cur) tot[i.cur] = (tot[i.cur] || 0) + i.value * (view === 'fav' ? 1 : i.qty);
+  for (const i of list) if (i.value && i.cur) tot[i.cur] = (tot[i.cur] || 0) + i.value * (view === 'col' ? i.qty : 1);
+  // valor cuando las guardaste, para ver cuánto ha cambiado la colección
+  let then = 0, nowSame = 0;
+  for (const i of list) if (i.v0 && i.value && (!i.cur0 || i.cur0 === i.cur)) { const m = view === 'col' ? i.qty : 1; then += i.v0 * m; nowSame += i.value * m; }
+  const totChg = then ? (nowSame - then) / then * 100 : null;
   const totTxt = Object.entries(tot).map(([c, v]) => money(v, c, c === 'JPY' ? 0 : 2)).join(' + ');
   // agrupa: juego › expansión o rareza
   const key2 = i => groupBy === 'rarity' ? (i.rarity || '—') : (i.set || T('Sin expansión'));
   const tree = {};
   for (const i of list) ((tree[i.game] ||= {})[key2(i)] ||= []).push(i);
-  const sumOf = arr => { const t = {}; for (const i of arr) if (i.value && i.cur) t[i.cur] = (t[i.cur] || 0) + i.value * (view === 'fav' ? 1 : i.qty);
+  const sumOf = arr => { const t = {}; for (const i of arr) if (i.value && i.cur) t[i.cur] = (t[i.cur] || 0) + i.value * (view === 'col' ? i.qty : 1);
     return Object.entries(t).map(([c, v]) => money(v, c, c === 'JPY' ? 0 : 2)).join(' + '); };
   const row = i => `<div class="mrow" data-id="${esc(idOf(i))}">
       ${i.img ? `<img src="${esc(i.img)}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}
       <div class="mi"><button class="link mopen">${esc(i.name)}</button>
         <div class="note">${esc([i.label, groupBy === 'rarity' ? i.set : i.rarity].filter(Boolean).join(' · '))}</div>
-        <div class="note">${esc(i.price || '')}${i.updated?.toDate ? ' · ' + T('Precio guardado el {0}. Abre la carta para actualizarlo.', i.updated.toDate().toLocaleDateString(LOCALE())) : ''}</div></div>
+        <div class="note">${esc(i.price || '')}${sinceTxt(i)}${i.updated?.toDate ? ' · ' + T('Precio guardado el {0}. Abre la carta para actualizarlo.', i.updated.toDate().toLocaleDateString(LOCALE())) : ''}</div>
+        ${i.alert ? `<div class="note${hitAlert(i) ? ' bell' : ''}">🔔 ${T('Avísame si baja de')} ${esc(String(i.alert).replace('.', ','))}${hitAlert(i) ? ' · ✅ ' + T('¡Ya está por debajo de tu precio!') : ''}</div>` : ''}</div>
       <div class="mq">${view === 'col' ? `<button data-q="-1">−</button><b>${i.qty}</b><button data-q="1">+</button>` : ''}
         <button class="mfav${i.fav ? ' on' : ''}" data-f="1" title="${T('Favoritos')}">${i.fav ? '★' : '☆'}</button>
         <button data-del="1" title="${T('Quitar')}">🗑</button></div></div>`;
+  const alertsN = [...items.values()].filter(i => i.alert).length;
   out.innerHTML = `<div class="mine-page">
     <div class="chips mtabs"><button class="chip${view === 'col' ? ' on' : ''}" data-v="col">📚 ${T('Mi colección')} (${[...items.values()].filter(i => i.qty > 0).length})</button>
-      <button class="chip${view === 'fav' ? ' on' : ''}" data-v="fav">⭐ ${T('Favoritos')} (${[...items.values()].filter(i => i.fav).length})</button></div>
+      <button class="chip${view === 'fav' ? ' on' : ''}" data-v="fav">⭐ ${T('Favoritos')} (${[...items.values()].filter(i => i.fav).length})</button>
+      ${alertsN ? `<button class="chip${view === 'alert' ? ' on' : ''}" data-v="alert">🔔 ${T('Alertas de precio')} (${alertsN})</button>` : ''}</div>
     ${all.length ? `<div class="bar mbar">
       <select id="mgame"><option value="all">${T('Todos los juegos')}</option>${games.map(g => `<option value="${g}"${g === gameFilter ? ' selected' : ''}>${esc(GAMES[g]?.label || g)}</option>`).join('')}</select>
       <label>${T('Agrupar por')} <select id="mgroup"><option value="set">${T('Expansión')}</option><option value="rarity"${groupBy === 'rarity' ? ' selected' : ''}>${T('Rareza')}</option></select></label>
+      <button class="gbtn soft" id="mcsv" style="margin:0">⬇️ ${T('Descargar (Excel / CSV)')}</button>
     </div>
-    <div class="big"><div class="lbl">${T('Valor total')} · ${T('{0} cartas', view === 'fav' ? list.length : list.reduce((s, i) => s + i.qty, 0))}</div><div class="val">${totTxt || '—'}</div></div>
+    <div class="big"><div class="lbl">${T('Valor total')} · ${T('{0} cartas', view === 'col' ? list.reduce((s, i) => s + i.qty, 0) : list.length)}</div><div class="val">${totTxt || '—'}</div>
+      ${totChg != null && Math.abs(totChg) >= 0.5 ? `<div class="trend"><span class="chg ${totChg > 0 ? 'up' : 'down'}">${totChg > 0 ? '▲' : '▼'} ${Math.abs(totChg).toFixed(1)} %</span> <small>${T('desde que las guardaste')}</small></div>` : ''}
+      ${view === 'alert' ? `<p class="note">${T('Las alertas se comprueban cuando abres la carta o esta lista: la web no puede enviarte avisos con el navegador cerrado.')}</p>` : ''}</div>
     ${Object.entries(tree).map(([g, groups]) => `<h3 class="mg">${ICONS[g] || ''} ${esc(GAMES[g]?.label || g)} <small>${sumOf(Object.values(groups).flat())}</small></h3>
       ${Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0])).map(([k, arr]) => `<details class="mset" open><summary>${esc(k)} <small>· ${T('{0} cartas', arr.length)} · ${sumOf(arr)}</small></summary>
         ${arr.sort((a, b) => (a.label || a.name).localeCompare(b.label || b.name, 'en', { numeric: true })).map(row).join('')}</details>`).join('')}`).join('')}`
-    : `<div class="msg">${T(view === 'fav' ? 'No tienes favoritos todavía.' : 'Tu colección está vacía. Busca una carta y pulsa «➕ Añadir a mi colección».')}</div>`}
+    : `<div class="msg">${T(view === 'fav' ? 'No tienes favoritos todavía.' : view === 'alert' ? 'No tienes alertas. Abre una carta y escribe un precio en «🔔 Avísame si baja de».' : 'Tu colección está vacía. Busca una carta y pulsa «➕ Añadir a mi colección».')}</div>`}
   </div>`;
   out.querySelectorAll('.mtabs .chip').forEach(b => b.onclick = () => showMine(b.dataset.v, true));
   if ($('mgame')) $('mgame').onchange = e => { gameFilter = e.target.value; showMine(view, true); };
   if ($('mgroup')) $('mgroup').onchange = e => { groupBy = e.target.value; showMine(view, true); };
+  if ($('mcsv')) $('mcsv').onclick = () => downloadCSV(list, view);
   out.querySelectorAll('.mrow').forEach(r => {
     const i = items.get(r.dataset.id); if (!i) return;
     r.querySelectorAll('[data-q]').forEach(b => b.onclick = () => save(i, { qty: Math.max(0, i.qty + Number(b.dataset.q)) }));
     r.querySelector('[data-f]').onclick = () => save(i, { fav: !i.fav });
-    r.querySelector('[data-del]').onclick = () => save(i, view === 'fav' ? { fav: false } : { qty: 0 });
+    r.querySelector('[data-del]').onclick = () => save(i, view === 'fav' ? { fav: false } : view === 'alert' ? { alert: null } : { qty: 0 });
     r.querySelector('.mopen').onclick = () => openItem(i);
   });
 }

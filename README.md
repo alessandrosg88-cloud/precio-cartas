@@ -9,6 +9,13 @@ Web muy sencilla para ver el precio de una carta escribiendo (o escaneando) su c
 - Muestra el precio de **Cardmarket (€)** y **TCGplayer ($)**.
 - **Versiones y rarezas:** con las flechas ‹ ›, deslizando el dedo o con ← → cambias entre las versiones de la carta (ediciones, rarezas, alt art, paralelas…) y se actualiza la imagen y el precio.
 - **Ver la expansión entera:** todas las cartas del set, ordenables por precio.
+- **Ordenar y filtrar versiones:** por precio o código, por rareza o escribiendo la expansión; botones «💎 La más cara» y «🪙 La más barata».
+- **Historial de precios:** gráfico con el precio de cada día (`data/hist/`, lo guarda la Action) y las medias de Cardmarket de 1, 7 y 30 días; ▲▼ % frente a la media de 30 días.
+- **Enlaces:** cada búsqueda y cada carta tienen su propia dirección (`#juego=…&q=…&v=…`) para compartirla o guardarla; funciona el botón Atrás del navegador.
+- **Autocompletar** mientras escribes, con foto y precio.
+- **Portada:** las cartas que más suben, las que más bajan, las más caras (`data/top/`) y las últimas expansiones.
+- **Moneda:** ver todo en la moneda original, en euros o en dólares (cambio del BCE). Modo oscuro/claro.
+- **Mi colección:** cambio de precio desde que guardaste cada carta, alertas «avísame si baja de…» y descarga en CSV (Excel).
 - **Gradeo:** enlaces a PSA, CGC, Beckett, SGC, TAG y PCA con sus precios aproximados.
 
 ### Yu-Gi-Oh!

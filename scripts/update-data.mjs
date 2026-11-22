@@ -2,7 +2,7 @@
 //  - Cartas, códigos, rarezas y precio en $ : TCGplayer (vía tcgcsv.com, datos públicos diarios)
 //  - Precio en € : guía de precios pública de Cardmarket (archivos oficiales diarios)
 // No necesita ninguna API key. Se ejecuta con: node scripts/update-data.mjs
-import { writeFile, mkdir, rm } from 'node:fs/promises';
+import { writeFile, mkdir, rm, readFile } from 'node:fs/promises';
 
 const GAMES = {
   onepiece: { name: 'One Piece',          tcg: [68],     cm: 18 },
@@ -169,6 +169,7 @@ function matchCardmarket(tcg, cm){
       c.cm = p.idProduct;
       c.e = r2(e); c.el = r2(pg.low || pg['low-foil']); c.e30 = r2(pg.avg30 || pg['avg30-foil']);
       c.ef = r2(pg['trend-foil'] || pg['trend-holo']);
+      c.e1 = r2(pg.avg1 || pg['avg1-foil']); c.e7 = r2(pg.avg7 || pg['avg7-foil']); // medias de 1 y 7 días (gráfico)
       if (a.length > 1 || b.length > 1) c.ea = 1;              // hay varias versiones: avisar
       matched++;
     });
@@ -248,7 +249,7 @@ function matchPrintsCardmarket(prints, cm){
           if (!pr) return;
           const pg = cm.prices[pr.idProduct], e = price(pr);
           if (isFinite(u) && Math.max(e, u) > 3 && (e / u > 3 || e / u < 0.33)) { rejected++; return; }
-          x.cm = pr.idProduct; x.e = r2(e); x.el = r2(pg.low); x.e30 = r2(pg.avg30); if (!same || a.length > 1) x.ea = 1; n++;
+          x.cm = pr.idProduct; x.e = r2(e); x.el = r2(pg.low); x.e30 = r2(pg.avg30); x.e1 = r2(pg.avg1); x.e7 = r2(pg.avg7); if (!same || a.length > 1) x.ea = 1; n++;
         });
       }
     }
@@ -347,12 +348,66 @@ async function writePrints(key, prints){
   const variant = n => [...String(n).matchAll(/\(([^()]+)\)/g)].map(m => m[1]).filter(t => !/rare|edition|parallel/i.test(t)).join(' · ');
   for (const x of prints) { const k = norm(x.n), v = variant(x.n);
     ((shards[shardOf(x.n)] ||= {})[k] ||= []).push({ c: x.c, r: x.r, g: x.g, id: x.id, p: x.p, ...(v ? { v } : {}),
-      ...(x.cm ? { cm: x.cm, e: x.e, el: x.el, e30: x.e30, ...(x.ea ? { ea: 1 } : {}) } : {}) }); }
+      ...(x.cm ? { cm: x.cm, e: x.e, el: x.el, e30: x.e30, e1: x.e1, e7: x.e7, ...(x.ea ? { ea: 1 } : {}) } : {}) }); }
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });
   const updated = new Date().toISOString();
   for (const [k, d] of Object.entries(shards)) await writeFile(`${dir}/${k}.json`, JSON.stringify({ updated, d }));
   console.log(`   Impresiones con precio: ${prints.length} en ${Object.keys(shards).length} archivos (${dir})`);
+}
+
+
+// ---------- Historial diario de precios ----------
+// data/hist/<juego>/<id % 64>.json = { d: [fechas], p: { id: [precio de cada fecha] } }
+// Cada día se añade el precio de hoy y se guardan los últimos HIST_DAYS días.
+// Solo cartas de al menos 0,50 (las muy baratas no interesan y harían los archivos enormes).
+const HIST_DAYS = 120, HIST_MIN = 0.5;
+async function updateHistory(key, entries, today = new Date().toISOString().slice(0, 10)){
+  const dir = `data/hist/${key}`;
+  await mkdir(dir, { recursive: true });
+  const shards = {};
+  for (const [id, v] of entries) if (id != null && v >= HIST_MIN) (shards[Number(id) % 64] ||= {})[id] = v;
+  let n = 0;
+  for (let k = 0; k < 64; k++) {
+    let old = { d: [], p: {} };
+    try { old = JSON.parse(await readFile(`${dir}/${k}.json`, 'utf8')); } catch (e) {}
+    let d = old.d.filter(x => x !== today), at = old.d.indexOf(today);
+    const p = {};
+    for (const [id, vals] of Object.entries(old.p)) {
+      const keep = at >= 0 ? vals.filter((_, i) => i !== at) : vals.slice();
+      p[id] = keep;
+    }
+    d.push(today);
+    const add = shards[k] || {};
+    for (const id of new Set([...Object.keys(p), ...Object.keys(add)])) {
+      const vals = p[id] || Array(d.length - 1).fill(null);
+      vals.push(add[id] ?? null);
+      p[id] = vals;
+    }
+    // recorta a los últimos días y quita cartas que ya no tienen ningún precio
+    const cut = Math.max(0, d.length - HIST_DAYS);
+    d = d.slice(cut);
+    for (const id of Object.keys(p)) { p[id] = p[id].slice(cut); if (!p[id].some(v => v != null)) delete p[id]; else n++; }
+    await writeFile(`${dir}/${k}.json`, JSON.stringify({ d, p }));
+  }
+  console.log(`   Historial: ${n} cartas (${dir})`);
+}
+
+// ---------- Portada: las que más suben, las que más bajan y las más caras ----------
+// data/top/<juego>.json, pequeño, para no tener que descargar todo el juego al abrir la web
+async function writeTop(key, list, sets = {}){
+  await mkdir('data/top', { recursive: true });
+  const pct = x => (x.e - x.e30) / x.e30;
+  // las emparejadas de forma aproximada (ea) con cambios muy grandes suelen ser errores de emparejamiento
+  const ok = list.filter(x => x.e >= 2 && x.e30 >= 2 && !(x.ea && Math.abs(pct(x)) > 0.4));
+  const pick = x => ({ id: x.id, n: x.n, c: x.c, r: x.r, s: x.s, e: x.e, e30: x.e30, u: x.u, q: x.q });
+  const uniq = arr => { const seen = new Set(); return arr.filter(x => { const k = x.n + '|' + x.c; if (seen.has(k)) return false; seen.add(k); return true; }); };
+  const up = uniq([...ok].sort((a, b) => pct(b) - pct(a))).slice(0, 12).filter(x => pct(x) > 0.02).map(pick);
+  const down = uniq([...ok].sort((a, b) => pct(a) - pct(b))).slice(0, 12).filter(x => pct(x) < -0.02).map(pick);
+  const top = uniq([...list].filter(x => x.e || x.u).sort((a, b) => (b.e || b.u * 0.92) - (a.e || a.u * 0.92))).slice(0, 12).map(pick);
+  const newest = Object.entries(sets).filter(([, x]) => x.d && !/promo|misc/i.test(x.n)).sort((a, b) => b[1].d.localeCompare(a[1].d))
+    .slice(0, 8).map(([g, x]) => ({ g, n: x.n, d: x.d }));
+  await writeFile(`data/top/${key}.json`, JSON.stringify({ updated: new Date().toISOString(), up, down, top, sets: newest }));
 }
 
 await mkdir('data/sealed', { recursive: true });
@@ -378,10 +433,17 @@ for (const [key, G] of Object.entries(GAMES)) {
       console.log(`   Sellados: ${all.sealed.length}, con precio Cardmarket: ${matchSealed(all.sealed, cm, all.sealedSets)}`);
     } catch (e) { console.log('   ⚠️ Cardmarket no disponible:', e.message); }
     await writeFile(`data/sealed/${key}.json`, JSON.stringify({ updated: new Date().toISOString(), cmUpdated, sets: all.sealedSets, items: all.sealed }));
-    if (G.prints && all.prints.length > 1000) await writePrints(key, all.prints);
+    if (G.prints && all.prints.length > 1000) {
+      await writePrints(key, all.prints);
+      const val = x => x.e ?? (Object.values(x.p || {}).map(q => q[0]).filter(Boolean).sort((a, b) => a - b)[0] || null);
+      await updateHistory(key, all.prints.map(x => [x.id, val(x)]));
+      await writeTop(key, all.prints.map(x => ({ id: x.id, n: x.n.replace(/\s*\([^)]*\)/g, '').trim(), c: x.c, r: x.r, s: x.g, e: x.e, e30: x.e30, ea: x.ea, q: x.c })));
+    }
     if (G.sealedOnly) continue;
     const out = { game: G.name, updated: new Date().toISOString(), cmUpdated, sets: all.sets, cards: all.cards };
     await writeFile(`data/${key}.json`, JSON.stringify(out));
+    await updateHistory(key, all.cards.map(c => [c.id, c.e ?? c.u]));
+    await writeTop(key, all.cards.map(c => ({ ...c, s: all.sets[c.g]?.n, q: c.c ? String(c.c).split(' ')[0] : c.n })), all.sets);
     // textos: un archivo por expansión, así la web solo descarga lo que necesita
     await rm(`data/text/${key}`, { recursive: true, force: true });
     await mkdir(`data/text/${key}`, { recursive: true });
@@ -397,7 +459,10 @@ if (!only || only === 'duelmasters') {
     const dm = await loadDuelMasters();
     console.log(`   ${dm.cards.length} cartas en ${Object.keys(dm.sets).length} packs, con precio: ${dm.cards.filter(c => c.y).length}`);
     if (dm.cards.length > 1000) // si algo falla y salen pocas, no machacamos los datos buenos de ayer
+    {
       await writeFile('data/duelmasters.json', JSON.stringify({ game: 'Duel Masters', updated: new Date().toISOString(), currency: 'JPY', sets: dm.sets, cards: dm.cards }));
+      await updateHistory('duelmasters', dm.cards.filter(c => c.y >= 100).map(c => [c.id, c.y]));
+    }
     index.duelmasters = { name: 'Duel Masters', cards: dm.cards.length };
   } catch (e) { console.log('   ❌ Error en Duel Masters:', e.message); }
 }
