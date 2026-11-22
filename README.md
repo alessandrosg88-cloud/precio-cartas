@@ -1,6 +1,8 @@
 # 🔎 Precio Cartas
 
-Web muy sencilla para ver el precio de una carta escribiendo (o escaneando) su código.
+Web para ver el precio de una carta escribiendo (o escaneando) su código. **Versión para PC** de la app [Precio Telefono](https://alessandrosg88-cloud.github.io/precio-telefono/): mismo diseño (violeta y oro), misma cuenta y mismas secciones, pero con barra lateral, buscador siempre arriba (atajo «/») y el contenido en columnas. En pantallas pequeñas se ve como la app, con la barra abajo.
+
+> La app del teléfono carga desde esta web `acceso.js`, `i18n*.js`, `guias.js`, `como-se-usa.js`, `centrado.js`, `logo.jpg` y `data/`: no se deben renombrar ni borrar.
 
 **Juegos:** Pokémon · Yu-Gi-Oh! · Magic · One Piece · Dragon Ball (Fusion World y Masters) · Digimon · Lorcana · Gundam · League of Legends (Riftbound) · Weiß Schwarz · World of Warcraft · Duel Masters (solo enlaces de búsqueda)
 
