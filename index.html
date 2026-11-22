@@ -439,7 +439,7 @@ function foldHelp(on){ $('help').classList.toggle('folded', !!on); }
 
 // ===================== UTILIDADES =====================
 // ---- Moneda: se puede ver todo en la moneda original, en euros o en dólares ----
-// FX = euros que vale 1 unidad de cada moneda. Se actualiza con el cambio del BCE (frankfurter.app).
+// FX = euros que vale 1 unidad de cada moneda. Se actualiza con el cambio del BCE (frankfurter.dev).
 const FX = { EUR: 1, USD: 0.92, JPY: 0.0061, date: null };
 const USD_EUR = () => FX.USD;
 let CUR = (() => { try { const c = localStorage.getItem('moneda'); return ['EUR', 'USD'].includes(c) ? c : 'orig'; } catch (e) { return 'orig'; } })();
@@ -1774,7 +1774,7 @@ applyLang();
 if (LANG !== 'es') loadLang(LANG).then(() => { applyLang(); if (redraw) redraw(); });
 </script>
 <!-- Autocompletar, enlaces de cada carta, portada con tendencias, moneda y modo oscuro -->
-<script src="extras.js?v=1"></script>
+<script src="extras.js?v=2"></script>
 <!-- Cuentas de usuario: Mi colección y Favoritos (Firebase) -->
 <script type="module" src="cuenta.js?v=3"></script>
 </body>

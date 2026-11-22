@@ -42,7 +42,7 @@
   document.addEventListener('click', e => { if (!e.target.closest('.curbar')) $('curmenu').classList.remove('open'); });
   // vuelve a dibujar lo que haya en pantalla (ficha, resultados o portada)
   function refresh(){ if (redraw) redraw(); else if (homeOn) showHome(); }
-  fetch('https://api.frankfurter.app/latest?from=EUR&to=USD,JPY').then(r => r.ok ? r.json() : null).then(d => {
+  fetch('https://api.frankfurter.dev/v1/latest?base=EUR&symbols=USD,JPY').then(r => r.ok ? r.json() : null).then(d => {
     if (!d?.rates?.USD) return;
     FX.USD = 1 / d.rates.USD; if (d.rates.JPY) FX.JPY = 1 / d.rates.JPY; FX.date = d.date;
     drawCur();
