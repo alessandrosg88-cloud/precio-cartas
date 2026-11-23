@@ -2273,15 +2273,15 @@ const MOB = {
 const _T = T;
 T = (s, ...a) => _T(MOB[LANG]?.[s] ?? s, ...a);
 // en el PC la barra va a la izquierda y tiene también Favoritos, Estadísticas y Reglas (clase "xtra", ocultas en el móvil)
-const TABS = [['home', '🏠', 'Inicio'], ['search', '🔎', 'Buscar'], ['col', '📚', 'Colección'], ['fav', '⭐', 'Favoritos', 1], ['sealed', '📦', 'Selladas'],
+const TABS = [['home', '🏠', 'Inicio'], ['search', '🔎', 'Buscar'], ['col', '📚', 'Colección'], ['vir', '🎴', 'Colección virtual'], ['fav', '⭐', 'Favoritos', 1], ['sealed', '📦', 'Selladas'],
   ['stats', '📊', 'Estadísticas', 1], ['cen', '📐', 'Centrado PSA'], ['guide', '📖', 'Reglas', 1], ['me', '👤', 'Perfil']];
 const TAB_OF = { fav: 'fav', stats: 'stats', guide: 'guide', progress: 'me' };
 let view = 'home', sub = null; // sub: sección de la barra lateral (Favoritos, Estadísticas, Reglas) dentro de una vista
 function drawTabbar(){
   const api = window.cuentaAPI, n = api?.user ? api.count('col') : 0;
   const on = sub && { fav: 'col', stats: 'me', guide: 'me' }[sub] === view ? sub : view;
-  $('tabbar').innerHTML = TABS.map(([k, ico, lbl, x]) => `<button data-v="${k}" class="${k === 'cen' ? 'scan' : ''}${x ? ' xtra' : ''}${k === on ? ' on' : ''}" aria-label="${T(lbl)}">
-    <span class="i">${ico}</span><span class="tl">${T(lbl)}</span>${k === 'col' && n ? `<span class="badge">${n}</span>` : ''}</button>`).join('');
+  $('tabbar').innerHTML = TABS.map(([k, ico, lbl, x]) => `<button data-v="${k}" class="${k === 'cen' ? 'scan' : ''}${x ? ' xtra' : ''}${k === on ? ' on' : ''}" aria-label="${(window.sbT || T)(lbl)}">
+    <span class="i">${ico}</span><span class="tl">${(window.sbT || T)(lbl)}</span>${k === 'col' && n ? `<span class="badge">${n}</span>` : ''}</button>`).join('');
   $('tabbar').querySelectorAll('button').forEach(b => b.onclick = () => go2(b.dataset.v));
 }
 function setView(v){
@@ -2302,6 +2302,7 @@ function go2(v){
   if (v === 'guide') { setView('me'); return showGuide(game); }
   if (v === 'sealed') { setView('sealed'); return showSealed(game); }
   if (v === 'col') { setView('col'); if (window.cuentaAPI?.user) return window.cuentaAPI.show('col'); out.innerHTML = loginCard(); return wireLogin(); }
+  if (v === 'vir') { setView('vir'); out.innerHTML = ''; return window.SOBRE?.show(); }
   if (v === 'me') { setView('me'); return showProfile(); }
   if (v === 'cen') { setView('cen'); return showCentering(); }
 }
@@ -3585,7 +3586,7 @@ window.cuentaAPI = {
 
 </script>
 <!-- Sobre diario con una carta (bronce, plata u oro) -->
-<script type="module" src="sobre.js?v=1"></script>
+<script type="module" src="sobre.js?v=2"></script>
 <!-- Autocompletar, enlaces de cada carta, tendencias del mercado y moneda (web) -->
 <script src="extras.js?v=4"></script>
 </body>

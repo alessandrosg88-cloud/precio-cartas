@@ -5,11 +5,12 @@
 //    Luffy o Zoro) con marco de bronce, plata u oro.
 //  - Cuantos más días seguidos entres (racha), más fácil es que salga de oro.
 //  - Se guarda en Firestore: users/{uid}/sobre/estado (las reglas ya permiten users/{uid}/**).
+//  - Pantalla «Colección virtual» (botón 🎴 de la barra) con las cartas, misiones y logros.
 //  Lo cargan precio-cartas y precio-telefono (esta lo pide por su <base href>).
 // =====================================================================
 import { getApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, doc, runTransaction, updateDoc, increment } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, doc, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const app = getApp();
 const auth = getAuth(app);
@@ -142,10 +143,8 @@ const css = `
 @media (prefers-reduced-motion:reduce){.sb-pack,.sb-shine,.sb-front::after,.sb-front.oro{animation:none}}
 `;
 
-let shown = false;
 function showPack(state, onOpened){
-  if (shown || document.querySelector('.sb-ov')) return;
-  shown = true;
+  if (document.querySelector('.sb-ov')) return;
   const card = CARDS.find(c => c.id === state.card) || CARDS[0];
   const frame = FRAMES.includes(state.frame) ? state.frame : 'bronce';
 
@@ -235,49 +234,312 @@ function showPack(state, onOpened){
   document.addEventListener('keydown', function esc(e){ if (e.key === 'Escape' && opened) { close(); document.removeEventListener('keydown', esc); } });
 }
 
-// ---------- Estado del día (Firestore, con copia local si falla) ----------
-async function claimToday(uid){
-  const t = today(), y = yesterday();
-  const ref = doc(db, 'users', uid, 'sobre', 'estado');
+// =====================================================================
+//  COLECCIÓN VIRTUAL, MISIONES Y LOGROS
+//  Estado en users/{uid}/sobre/estado:
+//   day, streak, best, card, frame, opened  → sobre del día
+//   album { 'pikachu_oro': n }, opens        → cartas conseguidas
+//   extra                                     → sobres extra (premios de misiones)
+//   week { id, opens, rare }, claimed { }     → misiones semanales
+//   ach { id: fecha }                         → logros desbloqueados
+// =====================================================================
+const TXT = {
+  en: {
+    'Colección virtual': 'Virtual collection', 'Virtual': 'Virtual', 'Entra para recibir un sobre cada día y empezar tu colección virtual.': 'Sign in to get a pack every day and start your virtual collection.',
+    'Entrar': 'Sign in', 'Cartas': 'Cards', 'Racha': 'Streak', 'días': 'days', 'Sobres abiertos': 'Packs opened', 'Oro hoy': 'Gold today',
+    'Abrir el sobre de hoy': 'Open today’s pack', 'Ya abriste el sobre de hoy. Vuelve mañana.': 'You already opened today’s pack. Come back tomorrow.',
+    'Abrir sobre extra': 'Open bonus pack', 'Misiones': 'Missions', 'Diaria': 'Daily', 'Semanales': 'Weekly', 'Logros': 'Achievements',
+    'Recompensa: 1 sobre extra': 'Reward: 1 bonus pack', 'Reclamar': 'Claim', 'Reclamada': 'Claimed', 'Abre el sobre de hoy': 'Open today’s pack',
+    'Abre 3 sobres esta semana': 'Open 3 packs this week', 'Abre 7 sobres esta semana': 'Open 7 packs this week',
+    'Consigue una carta de plata u oro esta semana': 'Get a silver or gold card this week', 'Llega a una racha de 5 días': 'Reach a 5-day streak',
+    'Cuantos más días seguidos entres, más fácil es que salga una carta de oro.': 'The more days in a row you sign in, the more likely you get a gold card.',
+    'Bronce': 'Bronze', 'Plata': 'Silver', 'Oro': 'Gold', '¡Logro desbloqueado!': 'Achievement unlocked!', '¡Sobre extra conseguido!': 'Bonus pack earned!',
+    'Primer sobre': 'First pack', 'Abre tu primer sobre': 'Open your first pack', 'Coleccionista': 'Collector', 'Abre 10 sobres': 'Open 10 packs',
+    'Gran coleccionista': 'Great collector', 'Abre 30 sobres': 'Open 30 packs', 'Leyenda': 'Legend', 'Abre 100 sobres': 'Open 100 packs',
+    'Constante': 'Steady', 'Racha de 3 días': '3-day streak', 'Imparable': 'Unstoppable', 'Racha de 7 días': '7-day streak', 'Un mes entero': 'A whole month', 'Racha de 30 días': '30-day streak',
+    'Brillo plateado': 'Silver shine', 'Consigue una carta de plata': 'Get a silver card', 'Toque de oro': 'Golden touch', 'Consigue una carta de oro': 'Get a gold card',
+    'Trío completo': 'Full trio', 'Una carta con los 3 marcos': 'One card in all 3 frames', 'Entrenador': 'Trainer', 'Pikachu y Charizard': 'Pikachu and Charizard',
+    'Duelista': 'Duelist', 'Blue-Eyes y Dark Magician': 'Blue-Eyes and Dark Magician', 'Sombrero de paja': 'Straw Hat', 'Luffy y Zoro': 'Luffy and Zoro',
+    'Todos los personajes': 'All characters', 'Las 6 cartas, con cualquier marco': 'All 6 cards, any frame', 'Rey Midas': 'King Midas', 'Las 6 cartas de oro': 'All 6 cards in gold',
+    'Colección completa': 'Complete collection', 'Las 18 cartas': 'All 18 cards',
+  },
+  it: {
+    'Colección virtual': 'Collezione virtuale', 'Virtual': 'Virtuale', 'Entra para recibir un sobre cada día y empezar tu colección virtual.': 'Accedi per ricevere una bustina ogni giorno e iniziare la tua collezione virtuale.',
+    'Entrar': 'Accedi', 'Cartas': 'Carte', 'Racha': 'Serie', 'días': 'giorni', 'Sobres abiertos': 'Bustine aperte', 'Oro hoy': 'Oro oggi',
+    'Abrir el sobre de hoy': 'Apri la bustina di oggi', 'Ya abriste el sobre de hoy. Vuelve mañana.': 'Hai già aperto la bustina di oggi. Torna domani.',
+    'Abrir sobre extra': 'Apri bustina extra', 'Misiones': 'Missioni', 'Diaria': 'Giornaliera', 'Semanales': 'Settimanali', 'Logros': 'Traguardi',
+    'Recompensa: 1 sobre extra': 'Premio: 1 bustina extra', 'Reclamar': 'Riscatta', 'Reclamada': 'Riscattata', 'Abre el sobre de hoy': 'Apri la bustina di oggi',
+    'Abre 3 sobres esta semana': 'Apri 3 bustine questa settimana', 'Abre 7 sobres esta semana': 'Apri 7 bustine questa settimana',
+    'Consigue una carta de plata u oro esta semana': 'Ottieni una carta d’argento o d’oro questa settimana', 'Llega a una racha de 5 días': 'Raggiungi una serie di 5 giorni',
+    'Cuantos más días seguidos entres, más fácil es que salga una carta de oro.': 'Più giorni di fila entri, più è facile trovare una carta d’oro.',
+    'Bronce': 'Bronzo', 'Plata': 'Argento', 'Oro': 'Oro', '¡Logro desbloqueado!': 'Traguardo sbloccato!', '¡Sobre extra conseguido!': 'Bustina extra ottenuta!',
+    'Primer sobre': 'Prima bustina', 'Abre tu primer sobre': 'Apri la tua prima bustina', 'Coleccionista': 'Collezionista', 'Abre 10 sobres': 'Apri 10 bustine',
+    'Gran coleccionista': 'Grande collezionista', 'Abre 30 sobres': 'Apri 30 bustine', 'Leyenda': 'Leggenda', 'Abre 100 sobres': 'Apri 100 bustine',
+    'Constante': 'Costante', 'Racha de 3 días': 'Serie di 3 giorni', 'Imparable': 'Inarrestabile', 'Racha de 7 días': 'Serie di 7 giorni', 'Un mes entero': 'Un mese intero', 'Racha de 30 días': 'Serie di 30 giorni',
+    'Brillo plateado': 'Lucentezza d’argento', 'Consigue una carta de plata': 'Ottieni una carta d’argento', 'Toque de oro': 'Tocco d’oro', 'Consigue una carta de oro': 'Ottieni una carta d’oro',
+    'Trío completo': 'Trio completo', 'Una carta con los 3 marcos': 'Una carta con le 3 cornici', 'Entrenador': 'Allenatore', 'Pikachu y Charizard': 'Pikachu e Charizard',
+    'Duelista': 'Duellante', 'Blue-Eyes y Dark Magician': 'Blue-Eyes e Dark Magician', 'Sombrero de paja': 'Cappello di paglia', 'Luffy y Zoro': 'Luffy e Zoro',
+    'Todos los personajes': 'Tutti i personaggi', 'Las 6 cartas, con cualquier marco': 'Le 6 carte, con qualsiasi cornice', 'Rey Midas': 'Re Mida', 'Las 6 cartas de oro': 'Le 6 carte d’oro',
+    'Colección completa': 'Collezione completa', 'Las 18 cartas': 'Tutte le 18 carte',
+  },
+};
+const t = s => (TXT[lang()] && TXT[lang()][s]) || s;
+// para la barra de navegación de las páginas (usa T() de la web si no hay traducción aquí)
+window.sbT = s => (TXT[lang()] && TXT[lang()][s]) || (typeof T === 'function' ? T(s) : s);
+
+const NAMES = { pikachu: 'Pikachu', charizard: 'Charizard', blueeyes: 'Blue-Eyes White Dragon', darkmagician: 'Dark Magician', luffy: 'Monkey D. Luffy', zoro: 'Roronoa Zoro' };
+const FNAME = { bronce: 'Bronce', plata: 'Plata', oro: 'Oro' };
+const goldChance = streak => Math.min(0.05 + 0.03 * Math.max(0, (streak || 1) - 1), 0.45);
+const has = (s, c, f) => (s.album?.[c + '_' + f] || 0) > 0;
+const hasAny = (s, c) => FRAMES.some(f => has(s, c, f));
+const owned = s => CARDS.reduce((n, c) => n + FRAMES.filter(f => has(s, c.id, f)).length, 0);
+const opensOf = s => s.opens ?? Object.values(s.album || {}).reduce((a, b) => a + b, 0);
+
+function weekId(d = new Date()){
+  const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dn = x.getUTCDay() || 7; x.setUTCDate(x.getUTCDate() + 4 - dn);
+  const y0 = new Date(Date.UTC(x.getUTCFullYear(), 0, 1));
+  return x.getUTCFullYear() + '-W' + pad(Math.ceil(((x - y0) / 86400000 + 1) / 7));
+}
+const weekOf = s => s.week?.id === weekId() ? s.week : { id: weekId(), opens: 0, rare: false };
+
+const DAILY = [{ id: 'd1', txt: 'Abre el sobre de hoy', done: s => s.day === today() && !!s.opened }];
+const WEEKLY = [
+  { id: 'w3', txt: 'Abre 3 sobres esta semana', goal: 3, val: s => weekOf(s).opens },
+  { id: 'w7', txt: 'Abre 7 sobres esta semana', goal: 7, val: s => weekOf(s).opens },
+  { id: 'wr', txt: 'Consigue una carta de plata u oro esta semana', goal: 1, val: s => weekOf(s).rare ? 1 : 0 },
+  { id: 'ws', txt: 'Llega a una racha de 5 días', goal: 5, val: s => s.day === today() || s.day === yesterday() ? (s.streak || 0) : 0 },
+];
+const ACH = [
+  ['a1', '📦', 'Primer sobre', 'Abre tu primer sobre', s => opensOf(s) >= 1],
+  ['a10', '🗃️', 'Coleccionista', 'Abre 10 sobres', s => opensOf(s) >= 10],
+  ['a30', '🏛️', 'Gran coleccionista', 'Abre 30 sobres', s => opensOf(s) >= 30],
+  ['a100', '👑', 'Leyenda', 'Abre 100 sobres', s => opensOf(s) >= 100],
+  ['s3', '🔥', 'Constante', 'Racha de 3 días', s => (s.best || 0) >= 3],
+  ['s7', '⚡', 'Imparable', 'Racha de 7 días', s => (s.best || 0) >= 7],
+  ['s30', '🌙', 'Un mes entero', 'Racha de 30 días', s => (s.best || 0) >= 30],
+  ['fp', '🥈', 'Brillo plateado', 'Consigue una carta de plata', s => CARDS.some(c => has(s, c.id, 'plata'))],
+  ['fo', '🥇', 'Toque de oro', 'Consigue una carta de oro', s => CARDS.some(c => has(s, c.id, 'oro'))],
+  ['tri', '🎖️', 'Trío completo', 'Una carta con los 3 marcos', s => CARDS.some(c => FRAMES.every(f => has(s, c.id, f)))],
+  ['pk', '⚡', 'Entrenador', 'Pikachu y Charizard', s => hasAny(s, 'pikachu') && hasAny(s, 'charizard')],
+  ['yg', '🐉', 'Duelista', 'Blue-Eyes y Dark Magician', s => hasAny(s, 'blueeyes') && hasAny(s, 'darkmagician')],
+  ['op', '🏴‍☠️', 'Sombrero de paja', 'Luffy y Zoro', s => hasAny(s, 'luffy') && hasAny(s, 'zoro')],
+  ['all', '🌟', 'Todos los personajes', 'Las 6 cartas, con cualquier marco', s => CARDS.every(c => hasAny(s, c.id))],
+  ['gold', '💛', 'Rey Midas', 'Las 6 cartas de oro', s => CARDS.every(c => has(s, c.id, 'oro'))],
+  ['full', '🏆', 'Colección completa', 'Las 18 cartas', s => owned(s) === CARDS.length * FRAMES.length],
+];
+
+// ---------- Guardar (Firestore con transacción; si falla, en este dispositivo) ----------
+let uid = null, state = null;
+const LKEY = () => 'pc_sobre_' + uid;
+async function update(fn){
+  const u = uid; if (!u) return null;
+  const ref = doc(db, 'users', u, 'sobre', 'estado');
+  let out;
   try {
-    return await runTransaction(db, async tx => {
+    out = await runTransaction(db, async tx => {
       const snap = await tx.get(ref);
       const s = snap.exists() ? snap.data() : {};
-      if (s.day === t) return { ...s, ref };
-      const streak = s.day === y ? (s.streak || 0) + 1 : 1;
-      const next = { day: t, streak, card: rollCard(), frame: rollFrame(streak), opened: false, best: Math.max(streak, s.best || 0) };
-      tx.set(ref, next, { merge: true });
-      return { ...s, ...next, ref };
+      const r = fn(s);
+      if (r === false) return { s, r };
+      tx.set(ref, s);
+      return { s, r };
     });
   } catch (e) {
-    // sin conexión o sin permisos: se guarda en este dispositivo
-    const k = 'pc_sobre_' + uid;
-    let s = {}; try { s = JSON.parse(localStorage.getItem(k)) || {}; } catch (_) {}
-    if (s.day !== t) {
-      const streak = s.day === y ? (s.streak || 0) + 1 : 1;
-      s = { ...s, day: t, streak, card: rollCard(), frame: rollFrame(streak), opened: false };
-      try { localStorage.setItem(k, JSON.stringify(s)); } catch (_) {}
-    }
-    return { ...s, local: k };
+    let s = {}; try { s = JSON.parse(localStorage.getItem(LKEY())) || {}; } catch (_) {}
+    const r = fn(s);
+    if (r !== false) try { localStorage.setItem(LKEY(), JSON.stringify(s)); } catch (_) {}
+    out = { s, r };
   }
+  if (uid === u) { state = out.s; redraw(); }
+  return out.r;
 }
-function markOpened(uid, s){
-  if (s.local) {
-    try { const d = JSON.parse(localStorage.getItem(s.local)) || {}; d.opened = true; const a = d.album || {}; a[s.card + '_' + s.frame] = (a[s.card + '_' + s.frame] || 0) + 1; d.album = a; localStorage.setItem(s.local, JSON.stringify(d)); } catch (_) {}
-    return;
-  }
-  updateDoc(s.ref, { opened: true, ['album.' + s.card + '_' + s.frame]: increment(1) }).catch(() => {});
+function newDay(s){
+  const t0 = today();
+  if (s.day === t0) return;
+  const streak = s.day === yesterday() ? (s.streak || 0) + 1 : 1;
+  Object.assign(s, { day: t0, streak, card: rollCard(), frame: rollFrame(streak), opened: false, best: Math.max(streak, s.best || 0) });
+}
+// apunta una carta abierta y devuelve los logros nuevos
+function applyOpen(s, card, frame){
+  s.album = s.album || {};
+  s.opens = opensOf(s) + 1;
+  s.album[card + '_' + frame] = (s.album[card + '_' + frame] || 0) + 1;
+  const w = weekOf(s); s.week = { id: w.id, opens: (w.opens || 0) + 1, rare: w.rare || frame !== 'bronce' };
+  s.best = Math.max(s.best || 0, s.streak || 0);
+  return newAch(s);
+}
+function newAch(s){
+  s.ach = s.ach || {};
+  const fresh = [];
+  for (const [id, , , , ok] of ACH) if (!s.ach[id] && ok(s)) { s.ach[id] = today(); fresh.push(id); }
+  return fresh;
+}
+function celebrate(ids){
+  ids.forEach((id, i) => { const a = ACH.find(x => x[0] === id); if (a) setTimeout(() => window.pcToast?.(a[1], t('¡Logro desbloqueado!'), t(a[2]), 5000), 600 + i * 1800); });
 }
 
-let lastUid = null;
+// ---------- Abrir sobres ----------
+function openDaily(){
+  if (!state || state.day !== today() || state.opened) return;
+  showPack(state, () => update(s => { newDay(s); if (s.opened) return false; s.opened = true; return applyOpen(s, s.card, s.frame); })
+    .then(ids => ids && celebrate(ids)));
+}
+async function openExtra(){
+  if (document.querySelector('.sb-ov')) return;
+  const r = await update(s => {
+    newDay(s);
+    if (!(s.extra > 0)) return false;
+    s.extra--;
+    const card = rollCard(), frame = rollFrame(s.streak || 1);
+    return { card, frame, ids: applyOpen(s, card, frame) };
+  });
+  if (r) showPack(r, () => celebrate(r.ids));
+}
+async function claim(id){
+  const r = await update(s => {
+    const m = WEEKLY.find(x => x.id === id), k = id + '_' + weekId();
+    s.claimed = s.claimed || {};
+    if (!m || s.claimed[k] || m.val(s) < m.goal) return false;
+    for (const key of Object.keys(s.claimed)) if (!key.endsWith(weekId())) delete s.claimed[key]; // limpia semanas viejas
+    s.claimed[k] = 1; s.extra = (s.extra || 0) + 1;
+    return true;
+  });
+  if (r) window.pcToast?.('🎁', t('¡Sobre extra conseguido!'), '', 4000);
+}
+
+// ---------- Pantalla "Colección virtual" ----------
+const vcss = `
+.vc-head{display:flex;align-items:center;gap:14px;margin:4px 0 14px}
+.vc-head .ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;background:linear-gradient(135deg,#6a44f2,#a347e6);box-shadow:0 6px 18px -4px rgba(106,68,242,.55)}
+.vc-head h2{margin:0;font-size:22px}.vc-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.vc-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 12px}
+.vc-kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px;text-align:center}
+.vc-kpi b{display:block;font-size:20px}.vc-kpi small{color:var(--muted);font-size:11.5px;font-weight:600}
+.vc-sec{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px;margin:0 0 12px}
+.vc-sec h3{margin:0 0 10px;font-size:16px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.vc-sec h3 small{color:var(--muted);font-size:12px;font-weight:600}
+.vc-btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;font-size:15px;cursor:pointer;color:#17142b;
+  background:linear-gradient(135deg,#ffe9a0,#ffc94a 50%,#f2b01e);box-shadow:0 4px 14px rgba(242,176,30,.35)}
+.vc-btn.soft{background:var(--accent-soft);color:var(--accent);box-shadow:none}
+.vc-btn[disabled]{opacity:.55;cursor:default}
+.vc-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.vc-note{color:var(--muted);font-size:13px;margin:8px 0 0}
+.vc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.vc-name{grid-column:1/-1;font-weight:700;font-size:14px;margin:8px 0 -2px}
+.vc-slot{position:relative;aspect-ratio:63/88;border-radius:10px;padding:5%;box-sizing:border-box;cursor:default;border:0}
+.vc-slot img{width:100%;height:100%;object-fit:cover;border-radius:6px;display:block}
+.vc-slot.bronce{background:linear-gradient(135deg,#5a2f12,#e0a070 22%,#9a5a2a 45%,#f3c69a 65%,#6e3a17 85%,#c47a3d)}
+.vc-slot.plata{background:linear-gradient(135deg,#6d7480,#f4f6fa 22%,#a9b0bb 45%,#ffffff 65%,#7b828e 85%,#d5dae2)}
+.vc-slot.oro{background:linear-gradient(135deg,#7a5a12,#f7e08a 20%,#c9971c 42%,#fff3b0 62%,#a87a12 82%,#ffd75e);box-shadow:0 0 14px rgba(255,201,74,.6)}
+.vc-slot.have{cursor:pointer}
+.vc-slot.lock{background:var(--accent-soft);border:2px dashed var(--line)}
+.vc-slot.lock::after{content:'?';position:absolute;inset:0;display:grid;place-items:center;font-size:28px;font-weight:800;color:var(--muted);opacity:.6}
+.vc-slot .n{position:absolute;right:4px;bottom:4px;background:rgba(23,20,42,.85);color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px}
+.vc-slot .f{position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.vc-mis{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.vc-mis:first-of-type{border-top:0}
+.vc-mis .tx{flex:1;min-width:0}.vc-mis .tx b{display:block;font-size:14px}.vc-mis .tx small{color:var(--muted);font-size:12px}
+.vc-bar{height:7px;border-radius:9px;background:var(--accent-soft);overflow:hidden;margin-top:6px}
+.vc-bar i{display:block;height:100%;background:linear-gradient(90deg,#6a44f2,#a347e6)}
+.vc-mis .ok{font-size:20px}
+.vc-mis .vc-btn{padding:7px 12px;font-size:13px}
+.vc-ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.vc-a{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:9px 10px}
+.vc-a .e{font-size:24px;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#ffe9a0,#ffc94a)}
+.vc-a b{display:block;font-size:13px}.vc-a small{color:var(--muted);font-size:11.5px;line-height:1.25;display:block}
+.vc-a.off{opacity:.45}.vc-a.off .e{background:var(--accent-soft);filter:grayscale(1)}
+.vc-zoom .vc-big{width:min(300px,74vw);aspect-ratio:63/88;border-radius:16px;padding:4.5%;box-sizing:border-box;position:relative}
+.vc-zoom .vc-big img{width:100%;height:100%;object-fit:cover;border-radius:10px;display:block}
+@media (max-width:520px){.vc-kpis{grid-template-columns:repeat(2,1fr)}}
+`;
+function imgTag(c){ return `<img alt="" loading="lazy" referrerpolicy="no-referrer" src="${c.img[0]}" data-alt="${c.img.slice(1).join('|')}">`; }
+function fixImgs(root){
+  root.querySelectorAll('img[data-alt]').forEach(im => im.onerror = () => {
+    const alt = im.dataset.alt ? im.dataset.alt.split('|') : []; if (!alt.length) return im.onerror = null;
+    im.dataset.alt = alt.slice(1).join('|'); im.src = alt[0];
+  });
+}
+const active = () => { try { return typeof view !== 'undefined' && view === 'vir'; } catch (e) { return false; } };
+function redraw(){ if (active()) render(); }
+
+function render(){
+  const out = document.getElementById('out'); if (!out) return;
+  if (!document.getElementById('vc-css')) { const st = document.createElement('style'); st.id = 'vc-css'; st.textContent = vcss; document.head.appendChild(st); }
+  const head = `<div class="vc-head"><div class="ic">🎴</div><div><h2>${t('Colección virtual')}</h2><p>${t('Cuantos más días seguidos entres, más fácil es que salga una carta de oro.')}</p></div></div>`;
+  if (!auth.currentUser) {
+    out.innerHTML = head + `<div class="vc-sec"><p style="margin:0 0 12px">${t('Entra para recibir un sobre cada día y empezar tu colección virtual.')}</p><button class="vc-btn" id="vcLogin">👤 ${t('Entrar')}</button></div>`;
+    out.querySelector('#vcLogin').onclick = () => window.cuentaAPI?.login('');
+    return;
+  }
+  const s = state || {};
+  const live = s.day === today() || s.day === yesterday();
+  const streak = live ? (s.streak || 0) : 0;
+  const wk = weekId(), claimed = s.claimed || {};
+  const total = CARDS.length * FRAMES.length;
+
+  const daily = s.day === today() && !s.opened
+    ? `<button class="vc-btn" id="vcDaily">🎁 ${t('Abrir el sobre de hoy')}</button>`
+    : `<p class="vc-note" style="margin:0">✅ ${t('Ya abriste el sobre de hoy. Vuelve mañana.')}</p>`;
+  const extra = s.extra > 0 ? `<button class="vc-btn soft" id="vcExtra">✨ ${t('Abrir sobre extra')} (${s.extra})</button>` : '';
+
+  const grid = CARDS.map(c => `<div class="vc-name">${NAMES[c.id]}</div>` + FRAMES.map(f => {
+    const n = s.album?.[c.id + '_' + f] || 0;
+    return n ? `<button class="vc-slot ${f} have" data-c="${c.id}" data-f="${f}" aria-label="${NAMES[c.id]} · ${t(FNAME[f])}"><span class="f">${t(FNAME[f])}</span>${imgTag(c)}${n > 1 ? `<span class="n">×${n}</span>` : ''}</button>`
+      : `<div class="vc-slot lock" aria-label="?"><span class="f">${t(FNAME[f])}</span></div>`;
+  }).join('')).join('');
+
+  const mis = m => {
+    const v = m.val(s), done = v >= m.goal, got = claimed[m.id + '_' + wk];
+    return `<div class="vc-mis"><div class="tx"><b>${t(m.txt)}</b><small>🎁 ${t('Recompensa: 1 sobre extra')} · ${Math.min(v, m.goal)}/${m.goal}</small>
+      <div class="vc-bar"><i style="width:${Math.min(100, v / m.goal * 100)}%"></i></div></div>
+      ${got ? `<span class="ok" title="${t('Reclamada')}">✅</span>` : `<button class="vc-btn" data-claim="${m.id}"${done ? '' : ' disabled'}>${t('Reclamar')}</button>`}</div>`;
+  };
+  const dailyM = DAILY.map(m => `<div class="vc-mis"><div class="tx"><b>${t(m.txt)}</b><small>🔥 ${t('Racha')}: ${streak} ${t('días')}</small></div><span class="ok">${m.done(s) ? '✅' : '⬜'}</span></div>`).join('');
+  const got = Object.keys(s.ach || {}).length;
+  const ach = ACH.map(([id, e, n, d]) => `<div class="vc-a${s.ach?.[id] ? '' : ' off'}"><span class="e">${e}</span><div><b>${t(n)}</b><small>${t(d)}</small></div></div>`).join('');
+
+  out.innerHTML = head + `
+    <div class="vc-kpis">
+      <div class="vc-kpi"><b>${owned(s)}/${total}</b><small>${t('Cartas')}</small></div>
+      <div class="vc-kpi"><b>🔥 ${streak}</b><small>${t('Racha')} (${t('días')})</small></div>
+      <div class="vc-kpi"><b>${opensOf(s)}</b><small>${t('Sobres abiertos')}</small></div>
+      <div class="vc-kpi"><b>${Math.round(goldChance(s.day === today() ? s.streak : streak + 1) * 100)} %</b><small>${t('Oro hoy')}</small></div>
+    </div>
+    <div class="vc-sec"><div class="vc-row">${daily}${extra}</div></div>
+    <div class="vc-sec"><h3>🎴 ${t('Colección virtual')} <small>${owned(s)}/${total}</small></h3><div class="vc-grid">${grid}</div></div>
+    <div class="vc-sec"><h3>🎯 ${t('Misiones')} <small>${t('Diaria')}</small></h3>${dailyM}</div>
+    <div class="vc-sec"><h3>📅 ${t('Misiones')} <small>${t('Semanales')}</small></h3>${WEEKLY.map(mis).join('')}</div>
+    <div class="vc-sec"><h3>🏅 ${t('Logros')} <small>${got}/${ACH.length}</small></h3><div class="vc-ach">${ach}</div></div>`;
+  fixImgs(out);
+  out.querySelector('#vcDaily')?.addEventListener('click', openDaily);
+  out.querySelector('#vcExtra')?.addEventListener('click', openExtra);
+  out.querySelectorAll('[data-claim]').forEach(b => b.onclick = () => claim(b.dataset.claim));
+  out.querySelectorAll('.vc-slot.have').forEach(b => b.onclick = () => zoom(b.dataset.c, b.dataset.f));
+}
+function zoom(cid, f){
+  const c = CARDS.find(x => x.id === cid); if (!c || document.querySelector('.sb-ov')) return;
+  if (!document.getElementById('sb-css')) { const st = document.createElement('style'); st.id = 'sb-css'; st.textContent = css; document.head.appendChild(st); }
+  const ov = document.createElement('div'); ov.className = 'sb-ov vc-zoom';
+  ov.innerHTML = `<button class="sb-x on" aria-label="✕">✕</button><div class="vc-big sb-front ${f}" style="transform:none">${imgTag(c)}</div>`;
+  document.body.appendChild(ov); fixImgs(ov);
+  requestAnimationFrame(() => ov.classList.add('in'));
+  const close = () => { ov.classList.remove('in'); setTimeout(() => ov.remove(), 350); };
+  ov.onclick = close;
+}
+window.SOBRE = { show: () => render() };
+
+// ---------- Sesión ----------
 onAuthStateChanged(auth, async u => {
-  if (!u) { lastUid = null; return; }
-  if (u.uid === lastUid) return;
-  lastUid = u.uid;
-  const s = await claimToday(u.uid);
-  if (s.opened || auth.currentUser?.uid !== u.uid) return;
+  uid = u ? u.uid : null; state = null;
+  redraw();
+  if (!u) return;
+  await update(s => { const before = s.day; newDay(s); const ids = newAch(s); return before === s.day && !ids.length ? false : true; });
+  if (uid !== u.uid || !state || state.opened) return;
   // espera a que se cierre la ventana de entrar (si está abierta)
-  const wait = () => { const l = document.getElementById('login'); return l && !l.hidden; };
-  const go = () => wait() ? setTimeout(go, 400) : showPack(s, () => markOpened(u.uid, s));
+  const busy = () => { const l = document.getElementById('login'); return l && !l.hidden; };
+  const go = () => busy() ? setTimeout(go, 400) : openDaily();
   setTimeout(go, 600);
 });
+// la barra de navegación ya se dibujó antes de cargar este archivo: se vuelve a dibujar con las traducciones
+try { if (typeof drawTabbar === 'function') drawTabbar(); } catch (e) {}
