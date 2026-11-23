@@ -296,6 +296,10 @@ window.sbT = s => (TXT[lang()] && TXT[lang()][s]) || (typeof T === 'function' ? 
 
 const NAMES = { pikachu: 'Pikachu', charizard: 'Charizard', blueeyes: 'Blue-Eyes White Dragon', darkmagician: 'Dark Magician', luffy: 'Monkey D. Luffy', zoro: 'Roronoa Zoro' };
 const FNAME = { bronce: 'Bronce', plata: 'Plata', oro: 'Oro' };
+// La racha es la misma que la de la página (🔥 de Inicio). Si no está disponible, se usa la de los sobres.
+const siteStreak = () => { try { const v = window.GX?.streak?.(); if (typeof v === 'number' && v > 0) return v; } catch (e) {} return null; };
+const siteBest = () => { try { const v = window.GX?.best?.(); if (typeof v === 'number') return v; } catch (e) {} return 0; };
+const streakOf = s => siteStreak() ?? (s.day === today() || s.day === yesterday() ? (s.streak || 0) : 0);
 const goldChance = streak => Math.min(0.05 + 0.03 * Math.max(0, (streak || 1) - 1), 0.45);
 const has = (s, c, f) => (s.album?.[c + '_' + f] || 0) > 0;
 const hasAny = (s, c) => FRAMES.some(f => has(s, c, f));
@@ -315,7 +319,7 @@ const WEEKLY = [
   { id: 'w3', txt: 'Abre 3 sobres esta semana', goal: 3, val: s => weekOf(s).opens },
   { id: 'w7', txt: 'Abre 7 sobres esta semana', goal: 7, val: s => weekOf(s).opens },
   { id: 'wr', txt: 'Consigue una carta de plata u oro esta semana', goal: 1, val: s => weekOf(s).rare ? 1 : 0 },
-  { id: 'ws', txt: 'Llega a una racha de 5 días', goal: 5, val: s => s.day === today() || s.day === yesterday() ? (s.streak || 0) : 0 },
+  { id: 'ws', txt: 'Llega a una racha de 5 días', goal: 5, val: s => streakOf(s) },
 ];
 const ACH = [
   ['a1', '📦', 'Primer sobre', 'Abre tu primer sobre', s => opensOf(s) >= 1],
@@ -364,8 +368,8 @@ async function update(fn){
 function newDay(s){
   const t0 = today();
   if (s.day === t0) return;
-  const streak = s.day === yesterday() ? (s.streak || 0) + 1 : 1;
-  Object.assign(s, { day: t0, streak, card: rollCard(), frame: rollFrame(streak), opened: false, best: Math.max(streak, s.best || 0) });
+  const streak = siteStreak() ?? (s.day === yesterday() ? (s.streak || 0) + 1 : 1);
+  Object.assign(s, { day: t0, streak, card: rollCard(), frame: rollFrame(streak), opened: false, best: Math.max(streak, s.best || 0, siteBest()) });
 }
 // Puntos por carta repetida (misma carta y mismo marco) y precio de un sobre en la tienda
 const DUP_PTS = { bronce: 2, plata: 5, oro: 15 };
@@ -379,11 +383,12 @@ function applyOpen(s, card, frame){
   s.opens = opensOf(s) + 1;
   s.album[card + '_' + frame] = (s.album[card + '_' + frame] || 0) + 1;
   const w = weekOf(s); s.week = { id: w.id, opens: (w.opens || 0) + 1, rare: w.rare || frame !== 'bronce' };
-  s.best = Math.max(s.best || 0, s.streak || 0);
+  s.best = Math.max(s.best || 0, s.streak || 0, streakOf(s), siteBest());
   return { ids: newAch(s), dup };
 }
 function newAch(s){
   s.ach = s.ach || {};
+  s.best = Math.max(s.best || 0, siteBest());
   const fresh = [];
   for (const [id, , , , ok] of ACH) if (!s.ach[id] && ok(s)) { s.ach[id] = today(); fresh.push(id); }
   return fresh;
@@ -407,7 +412,7 @@ async function openExtra(){
     newDay(s);
     if (!(s.extra > 0)) return false;
     s.extra--;
-    const card = rollCard(), frame = rollFrame(s.streak || 1);
+    const card = rollCard(), frame = rollFrame(streakOf(s) || 1);
     return { card, frame, ...applyOpen(s, card, frame) };
   });
   if (r) showPack(r, () => celebrate(r));
@@ -505,8 +510,7 @@ function render(){
     return;
   }
   const s = state || {};
-  const live = s.day === today() || s.day === yesterday();
-  const streak = live ? (s.streak || 0) : 0;
+  const streak = streakOf(s);
   const wk = weekId(), claimed = s.claimed || {};
   const total = CARDS.length * FRAMES.length;
 
@@ -537,7 +541,7 @@ function render(){
       <div class="vc-kpi"><b>🔥 ${streak}</b><small>${t('Racha')} (${t('días')})</small></div>
       <div class="vc-kpi"><b>${opensOf(s)}</b><small>${t('Sobres abiertos')}</small></div>
       <div class="vc-kpi"><b>💎 ${s.points || 0}</b><small>${t('Puntos')}</small></div>
-      <div class="vc-kpi"><b>${Math.round(goldChance(s.day === today() ? s.streak : streak + 1) * 100)} %</b><small>${t('Oro hoy')}</small></div>
+      <div class="vc-kpi"><b>${Math.round(goldChance(streak || 1) * 100)} %</b><small>${t('Oro hoy')}</small></div>
     </div>
     <div class="vc-sec"><div class="vc-row">${daily}${extra}</div></div>
     <div class="vc-sec"><h3>💎 ${t('Puntos')} <small>${t('Carta repetida')}</small></h3><div class="vc-shop">
