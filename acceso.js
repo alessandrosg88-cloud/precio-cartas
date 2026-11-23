@@ -1,11 +1,14 @@
 // =====================================================================
-//  ACCESO SOLO ADMINISTRADOR
-//  La web queda cerrada: solo se ve después de entrar con el email del
-//  administrador y su contraseña (Firebase Authentication).
+//  ACCESO PRIVADO
+//  La web queda cerrada: solo se ve después de entrar con uno de los emails
+//  autorizados (PERMITIDOS) y su contraseña (Firebase Authentication).
+//  Para dejar entrar a alguien más, añade su email a la lista PERMITIDOS.
 //  Se carga en <head> con: <script src="acceso.js?v=1"></script>
 // =====================================================================
 (() => {
   const ADMIN = 'colezzionisaglimbenimedina@gmail.com';
+  const PERMITIDOS = [ADMIN, 'giova9955@gmail.com'];
+  const allowed = e => PERMITIDOS.includes(String(e || '').trim().toLowerCase());
   const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
   const CFG = {
     apiKey: 'AIzaSyBe6sgVxhXGKYilnV0Dghj8Z9wn6TSWobc',
@@ -45,11 +48,12 @@
     document.body.insertAdjacentHTML('afterbegin', `<div id="accGate"><form id="accForm" autocomplete="on">
       <img class="accLogo" src="logo.jpg" alt="Colezzioni Saglimbeni Medina">
       <h2>🔒 Acceso privado</h2>
-      <p>Solo el administrador puede entrar.</p>
-      <input id="accEmail" type="email" placeholder="Email del administrador" autocomplete="username" required>
+      <p>Solo pueden entrar los usuarios autorizados.</p>
+      <input id="accEmail" type="email" placeholder="Email" autocomplete="username" required>
       <input id="accPass" type="password" placeholder="Contraseña" autocomplete="current-password" required>
       <button id="accBtn" type="submit" disabled>Comprobando…</button>
-      <button id="accForgot" type="button" class="accLink">¿No tienes contraseña o la olvidaste?</button>
+      <button id="accNew" type="button" class="accLink">Crear mi cuenta</button>
+      <button id="accForgot" type="button" class="accLink">¿Olvidaste la contraseña?</button>
       <div class="accMsg ok" id="accMsg"></div>
     </form></div>`);
   }
@@ -61,11 +65,11 @@
     drawGate();
     try {
       const { initializeApp, getApps, getApp } = await import(FB + 'firebase-app.js');
-      const { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } = await import(FB + 'firebase-auth.js');
+      const { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } = await import(FB + 'firebase-auth.js');
       // usa la misma app de Firebase que la página (así la sesión es la misma)
       const app = getApps().length ? getApp() : initializeApp(CFG);
       const auth = getAuth(app);
-      const isAdmin = u => !!u && (u.email || '').toLowerCase() === ADMIN;
+      const isAdmin = u => !!u && allowed(u.email);
 
       onAuthStateChanged(auth, u => {
         if (isAdmin(u)) { root.classList.remove('locked'); return; }
@@ -77,17 +81,31 @@
       $('accForm').addEventListener('submit', async e => {
         e.preventDefault();
         const email = $('accEmail').value.trim().toLowerCase();
-        if (email !== ADMIN) return msg('Email o contraseña incorrectos.');
+        if (!allowed(email)) return msg('Email o contraseña incorrectos.');
         $('accBtn').disabled = true; msg('');
         try { await signInWithEmailAndPassword(auth, email, $('accPass').value); $('accPass').value = ''; }
         catch { msg('Email o contraseña incorrectos.'); }
         ready();
       });
 
-      // envía al email del administrador un enlace para poner una contraseña nueva
+      // crear la cuenta (solo con un email autorizado)
+      $('accNew').addEventListener('click', async () => {
+        const email = $('accEmail').value.trim().toLowerCase(), pass = $('accPass').value;
+        if (!allowed(email)) return msg('Este email no está autorizado para entrar.');
+        if (pass.length < 6) return msg('Escribe una contraseña de al menos 6 caracteres.');
+        $('accBtn').disabled = true; msg('');
+        try { await createUserWithEmailAndPassword(auth, email, pass); $('accPass').value = ''; }
+        catch (e) { msg(e?.code === 'auth/email-already-in-use' ? 'Ese email ya tiene cuenta: pulsa «Entrar» (o «¿Olvidaste la contraseña?»).' : 'No se pudo crear la cuenta. Inténtalo otra vez.'); }
+        ready();
+      });
+
+      // envía al email escrito (si está autorizado) un enlace para poner una contraseña nueva
       $('accForgot').addEventListener('click', async () => {
-        try { await sendPasswordResetEmail(auth, ADMIN);
-          msg('Te hemos enviado un email a ' + ADMIN + ' para poner la contraseña. Mira también en spam.', true); }
+        const email = $('accEmail').value.trim().toLowerCase();
+        if (!email) return msg('Escribe tu email y pulsa otra vez.');
+        if (!allowed(email)) return msg('Este email no está autorizado para entrar.');
+        try { await sendPasswordResetEmail(auth, email);
+          msg('Te hemos enviado un email a ' + email + ' para poner la contraseña. Mira también en spam.', true); }
         catch { msg('No se pudo enviar el email. Inténtalo otra vez.'); }
       });
     } catch {
