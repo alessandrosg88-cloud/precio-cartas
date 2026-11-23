@@ -425,8 +425,10 @@ const vcss = `
 .vc-btn[disabled]{opacity:.55;cursor:default}
 .vc-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .vc-note{color:var(--muted);font-size:13px;margin:8px 0 0}
-.vc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.vc-name{grid-column:1/-1;font-weight:700;font-size:14px;margin:8px 0 -2px}
+.vc-grid{display:grid;grid-template-columns:1fr;gap:6px}
+@media (min-width:1000px){.vc-grid{grid-template-columns:repeat(2,1fr);gap:16px 28px}}
+.vc-grp{display:grid;grid-template-columns:repeat(3,minmax(0,140px));gap:12px 10px}
+.vc-name{font-weight:700;font-size:14px;margin:8px 0 12px}
 .vc-slot{position:relative;aspect-ratio:63/88;border-radius:10px;padding:5%;box-sizing:border-box;cursor:default;border:0}
 .vc-slot img{width:100%;height:100%;object-fit:cover;border-radius:6px;display:block}
 .vc-slot.bronce{background:linear-gradient(135deg,#5a2f12,#e0a070 22%,#9a5a2a 45%,#f3c69a 65%,#6e3a17 85%,#c47a3d)}
@@ -483,11 +485,11 @@ function render(){
     : `<p class="vc-note" style="margin:0">✅ ${t('Ya abriste el sobre de hoy. Vuelve mañana.')}</p>`;
   const extra = s.extra > 0 ? `<button class="vc-btn soft" id="vcExtra">✨ ${t('Abrir sobre extra')} (${s.extra})</button>` : '';
 
-  const grid = CARDS.map(c => `<div class="vc-name">${NAMES[c.id]}</div>` + FRAMES.map(f => {
+  const grid = CARDS.map(c => `<div><div class="vc-name">${NAMES[c.id]}</div><div class="vc-grp">` + FRAMES.map(f => {
     const n = s.album?.[c.id + '_' + f] || 0;
     return n ? `<button class="vc-slot ${f} have" data-c="${c.id}" data-f="${f}" aria-label="${NAMES[c.id]} · ${t(FNAME[f])}"><span class="f">${t(FNAME[f])}</span>${imgTag(c)}${n > 1 ? `<span class="n">×${n}</span>` : ''}</button>`
       : `<div class="vc-slot lock" aria-label="?"><span class="f">${t(FNAME[f])}</span></div>`;
-  }).join('')).join('');
+  }).join('') + '</div></div>').join('');
 
   const mis = m => {
     const v = m.val(s), done = v >= m.goal, got = claimed[m.id + '_' + wk];
