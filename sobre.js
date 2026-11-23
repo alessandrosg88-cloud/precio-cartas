@@ -584,7 +584,7 @@ onAuthStateChanged(auth, async u => {
     return before === s.day && !ids.length && !ch ? false : true; });
   if (uid !== u.uid || !state || state.opened) return;
   // espera a que se cierre la ventana de entrar (si está abierta)
-  const busy = () => { const l = document.getElementById('login'); return l && !l.hidden; };
+  const busy = () => { const l = document.getElementById('login'), e = document.getElementById('esheet'); return (l && !l.hidden) || (e && !e.hidden); };
   const go = () => busy() ? setTimeout(go, 400) : openDaily();
   setTimeout(go, 600);
 });
