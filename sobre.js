@@ -6,6 +6,7 @@
 //  - Cuantos más días seguidos entres (racha), más fácil es que salga de oro.
 //  - Se guarda en Firestore: users/{uid}/sobre/estado (las reglas ya permiten users/{uid}/**).
 //  - Pantalla «Colección virtual» (botón 🎴 de la barra) con las cartas, misiones y logros.
+//  - Las cartas repetidas dan puntos (bronce 2, plata 5, oro 15); 10 puntos = 1 sobre extra.
 //  Lo cargan precio-cartas y precio-telefono (esta lo pide por su <base href>).
 // =====================================================================
 import { getApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
@@ -262,6 +263,9 @@ const TXT = {
     'Duelista': 'Duelist', 'Blue-Eyes y Dark Magician': 'Blue-Eyes and Dark Magician', 'Sombrero de paja': 'Straw Hat', 'Luffy y Zoro': 'Luffy and Zoro',
     'Todos los personajes': 'All characters', 'Las 6 cartas, con cualquier marco': 'All 6 cards, any frame', 'Rey Midas': 'King Midas', 'Las 6 cartas de oro': 'All 6 cards in gold',
     'Colección completa': 'Complete collection', 'Las 18 cartas': 'All 18 cards',
+    'Puntos': 'Points', 'puntos': 'points', 'Carta repetida': 'Duplicate card', 'Canjear por un sobre': 'Exchange for a pack',
+    'Cada carta repetida te da puntos. Cámbialos por sobres.': 'Every duplicate card gives you points. Exchange them for packs.',
+    'Cambia {0} puntos por un sobre en la Colección virtual.': 'Exchange {0} points for a pack in the Virtual collection.',
   },
   it: {
     'Colección virtual': 'Collezione virtuale', 'Virtual': 'Virtuale', 'Entra para recibir un sobre cada día y empezar tu colección virtual.': 'Accedi per ricevere una bustina ogni giorno e iniziare la tua collezione virtuale.',
@@ -281,6 +285,9 @@ const TXT = {
     'Duelista': 'Duellante', 'Blue-Eyes y Dark Magician': 'Blue-Eyes e Dark Magician', 'Sombrero de paja': 'Cappello di paglia', 'Luffy y Zoro': 'Luffy e Zoro',
     'Todos los personajes': 'Tutti i personaggi', 'Las 6 cartas, con cualquier marco': 'Le 6 carte, con qualsiasi cornice', 'Rey Midas': 'Re Mida', 'Las 6 cartas de oro': 'Le 6 carte d’oro',
     'Colección completa': 'Collezione completa', 'Las 18 cartas': 'Tutte le 18 carte',
+    'Puntos': 'Punti', 'puntos': 'punti', 'Carta repetida': 'Carta doppia', 'Canjear por un sobre': 'Scambia per una bustina',
+    'Cada carta repetida te da puntos. Cámbialos por sobres.': 'Ogni carta doppia ti dà punti. Scambiali con bustine.',
+    'Cambia {0} puntos por un sobre en la Colección virtual.': 'Scambia {0} punti per una bustina nella Collezione virtuale.',
   },
 };
 const t = s => (TXT[lang()] && TXT[lang()][s]) || s;
@@ -360,14 +367,20 @@ function newDay(s){
   const streak = s.day === yesterday() ? (s.streak || 0) + 1 : 1;
   Object.assign(s, { day: t0, streak, card: rollCard(), frame: rollFrame(streak), opened: false, best: Math.max(streak, s.best || 0) });
 }
-// apunta una carta abierta y devuelve los logros nuevos
+// Puntos por carta repetida (misma carta y mismo marco) y precio de un sobre en la tienda
+const DUP_PTS = { bronce: 2, plata: 5, oro: 15 };
+const PACK_COST = 10;
+const retroPts = s => Object.entries(s.album || {}).reduce((t0, [k, n]) => t0 + Math.max(0, n - 1) * (DUP_PTS[k.split('_')[1]] || 0), 0);
+// apunta una carta abierta; devuelve los logros nuevos y los puntos ganados si era repetida
 function applyOpen(s, card, frame){
   s.album = s.album || {};
+  const dup = (s.album[card + '_' + frame] || 0) > 0 ? DUP_PTS[frame] : 0;
+  if (dup) s.points = (s.points || 0) + dup;
   s.opens = opensOf(s) + 1;
   s.album[card + '_' + frame] = (s.album[card + '_' + frame] || 0) + 1;
   const w = weekOf(s); s.week = { id: w.id, opens: (w.opens || 0) + 1, rare: w.rare || frame !== 'bronce' };
   s.best = Math.max(s.best || 0, s.streak || 0);
-  return newAch(s);
+  return { ids: newAch(s), dup };
 }
 function newAch(s){
   s.ach = s.ach || {};
@@ -375,15 +388,18 @@ function newAch(s){
   for (const [id, , , , ok] of ACH) if (!s.ach[id] && ok(s)) { s.ach[id] = today(); fresh.push(id); }
   return fresh;
 }
-function celebrate(ids){
-  ids.forEach((id, i) => { const a = ACH.find(x => x[0] === id); if (a) setTimeout(() => window.pcToast?.(a[1], t('¡Logro desbloqueado!'), t(a[2]), 5000), 600 + i * 1800); });
+function celebrate(r){
+  if (!r) return;
+  const ids = r.ids || [];
+  if (r.dup) setTimeout(() => window.pcToast?.('🔁', t('Carta repetida') + ': +' + r.dup + ' ' + t('puntos'), t('Cambia {0} puntos por un sobre en la Colección virtual.').replace('{0}', PACK_COST), 5000), 900);
+  ids.forEach((id, i) => { const a = ACH.find(x => x[0] === id); if (a) setTimeout(() => window.pcToast?.(a[1], t('¡Logro desbloqueado!'), t(a[2]), 5000), (r.dup ? 2600 : 600) + i * 1800); });
 }
 
 // ---------- Abrir sobres ----------
 function openDaily(){
   if (!state || state.day !== today() || state.opened) return;
   showPack(state, () => update(s => { newDay(s); if (s.opened) return false; s.opened = true; return applyOpen(s, s.card, s.frame); })
-    .then(ids => ids && celebrate(ids)));
+    .then(celebrate));
 }
 async function openExtra(){
   if (document.querySelector('.sb-ov')) return;
@@ -392,9 +408,18 @@ async function openExtra(){
     if (!(s.extra > 0)) return false;
     s.extra--;
     const card = rollCard(), frame = rollFrame(s.streak || 1);
-    return { card, frame, ids: applyOpen(s, card, frame) };
+    return { card, frame, ...applyOpen(s, card, frame) };
   });
-  if (r) showPack(r, () => celebrate(r.ids));
+  if (r) showPack(r, () => celebrate(r));
+}
+// tienda: cambia puntos por un sobre extra
+async function buyPack(){
+  const r = await update(s => {
+    if ((s.points || 0) < PACK_COST) return false;
+    s.points -= PACK_COST; s.extra = (s.extra || 0) + 1;
+    return true;
+  });
+  if (r) window.pcToast?.('🎁', t('¡Sobre extra conseguido!'), '', 3500);
 }
 async function claim(id){
   const r = await update(s => {
@@ -413,7 +438,12 @@ const vcss = `
 .vc-head{display:flex;align-items:center;gap:14px;margin:4px 0 14px}
 .vc-head .ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;background:linear-gradient(135deg,#6a44f2,#a347e6);box-shadow:0 6px 18px -4px rgba(106,68,242,.55)}
 .vc-head h2{margin:0;font-size:22px}.vc-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
-.vc-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 12px}
+.vc-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:0 0 12px}
+.vc-shop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.vc-shop .pts{font-size:26px;font-weight:800;background:linear-gradient(135deg,#c9971c,#f2b01e);-webkit-background-clip:text;background-clip:text;color:transparent}
+.vc-shop .tx{flex:1;min-width:180px;color:var(--muted);font-size:13px}
+.vc-tbl{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.vc-tbl span{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;color:#17142b}
 .vc-kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px;text-align:center}
 .vc-kpi b{display:block;font-size:20px}.vc-kpi small{color:var(--muted);font-size:11.5px;font-weight:600}
 .vc-sec{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px;margin:0 0 12px}
@@ -453,7 +483,7 @@ const vcss = `
 .vc-a.off{opacity:.45}.vc-a.off .e{background:var(--accent-soft);filter:grayscale(1)}
 .vc-zoom .vc-big{width:min(300px,74vw);aspect-ratio:63/88;border-radius:16px;padding:4.5%;box-sizing:border-box;position:relative}
 .vc-zoom .vc-big img{width:100%;height:100%;object-fit:cover;border-radius:10px;display:block}
-@media (max-width:520px){.vc-kpis{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:620px){.vc-kpis{grid-template-columns:repeat(2,1fr)}.vc-kpis .vc-kpi:last-child{grid-column:1/-1}}
 `;
 function imgTag(c){ return `<img alt="" loading="lazy" referrerpolicy="no-referrer" src="${c.img[0]}" data-alt="${c.img.slice(1).join('|')}">`; }
 function fixImgs(root){
@@ -506,9 +536,17 @@ function render(){
       <div class="vc-kpi"><b>${owned(s)}/${total}</b><small>${t('Cartas')}</small></div>
       <div class="vc-kpi"><b>🔥 ${streak}</b><small>${t('Racha')} (${t('días')})</small></div>
       <div class="vc-kpi"><b>${opensOf(s)}</b><small>${t('Sobres abiertos')}</small></div>
+      <div class="vc-kpi"><b>💎 ${s.points || 0}</b><small>${t('Puntos')}</small></div>
       <div class="vc-kpi"><b>${Math.round(goldChance(s.day === today() ? s.streak : streak + 1) * 100)} %</b><small>${t('Oro hoy')}</small></div>
     </div>
     <div class="vc-sec"><div class="vc-row">${daily}${extra}</div></div>
+    <div class="vc-sec"><h3>💎 ${t('Puntos')} <small>${t('Carta repetida')}</small></h3><div class="vc-shop">
+      <span class="pts">💎 ${s.points || 0}</span>
+      <div class="tx">${t('Cada carta repetida te da puntos. Cámbialos por sobres.')}
+        <div class="vc-tbl"><span style="background:linear-gradient(135deg,#e0a070,#f3c69a)">${t('Bronce')} +${DUP_PTS.bronce}</span><span style="background:linear-gradient(135deg,#cfd6e0,#fff)">${t('Plata')} +${DUP_PTS.plata}</span><span style="background:linear-gradient(135deg,#f7e08a,#ffc94a)">${t('Oro')} +${DUP_PTS.oro}</span></div></div>
+      <button class="vc-btn" id="vcBuy"${(s.points || 0) >= PACK_COST ? '' : ' disabled'}>🎁 ${t('Canjear por un sobre')} (${PACK_COST} 💎)</button>
+      <div class="vc-bar" style="flex-basis:100%;margin:0"><i style="width:${Math.min(100, (s.points || 0) / PACK_COST * 100)}%"></i></div>
+    </div></div>
     <div class="vc-sec"><h3>🎴 ${t('Colección virtual')} <small>${owned(s)}/${total}</small></h3><div class="vc-grid">${grid}</div></div>
     <div class="vc-sec"><h3>🎯 ${t('Misiones')} <small>${t('Diaria')}</small></h3>${dailyM}</div>
     <div class="vc-sec"><h3>📅 ${t('Misiones')} <small>${t('Semanales')}</small></h3>${WEEKLY.map(mis).join('')}</div>
@@ -516,6 +554,7 @@ function render(){
   fixImgs(out);
   out.querySelector('#vcDaily')?.addEventListener('click', openDaily);
   out.querySelector('#vcExtra')?.addEventListener('click', openExtra);
+  out.querySelector('#vcBuy')?.addEventListener('click', buyPack);
   out.querySelectorAll('[data-claim]').forEach(b => b.onclick = () => claim(b.dataset.claim));
   out.querySelectorAll('.vc-slot.have').forEach(b => b.onclick = () => zoom(b.dataset.c, b.dataset.f));
 }
@@ -536,7 +575,9 @@ onAuthStateChanged(auth, async u => {
   uid = u ? u.uid : null; state = null;
   redraw();
   if (!u) return;
-  await update(s => { const before = s.day; newDay(s); const ids = newAch(s); return before === s.day && !ids.length ? false : true; });
+  await update(s => { const before = s.day; newDay(s); const ids = newAch(s);
+    let ch = false; if (!s.ptsInit) { s.points = (s.points || 0) + retroPts(s); s.ptsInit = 1; ch = true; } // puntos de las repetidas de antes
+    return before === s.day && !ids.length && !ch ? false : true; });
   if (uid !== u.uid || !state || state.opened) return;
   // espera a que se cierre la ventana de entrar (si está abierta)
   const busy = () => { const l = document.getElementById('login'); return l && !l.hidden; };
