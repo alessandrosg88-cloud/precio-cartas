@@ -1864,7 +1864,7 @@ function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
   if (se && isGMR(set) && sp && (se / sp > 3 || se / sp < 0.2)) se = null; // emparejamiento dudoso con otra versión
   const approx = !sp && set && Number(set.set_price) ? Number(set.set_price) : null; // TCGplayer no la vende: dato orientativo
   return {
-    gmr: isGMR(set), str: isStR(set), overframe: isOF(set), ofNoScan: isOF(set) && !!scan && !scan.extra?.includes('EA'),
+    gmr: isGMR(set), str: isStR(set), overframe: isOF(set), ofNoScan: isOF(set) && !set.ocg && !!scan && !scan.extra?.includes('EA'),
     img: scan?.url || c.card_images?.[0]?.image_url, replica: !scan, deepQ: loc.code || set?.set_code || c.name, name: locName || c.name, subname: locName && locName !== c.name ? c.name : '', rarity: set?.set_rarity,
     alts,
     updated: pr && ps.length ? T(se ? 'Cardmarket del {0}' : 'TCGplayer del {0}', fecha(pr.updated)) : '',
