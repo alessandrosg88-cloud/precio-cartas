@@ -1683,8 +1683,21 @@ async function openYugiohOCG(c, code, f){
       i: x ? ygpThumb(x.url) : c.card_images?.[0]?.image_url_small, rep: !x }; });
 }
 
+// Expansiones por nombre (YGOPRODeck). Acepta números en vez de romanos y sin la s final: «legendary deck 2» = «Legendary Decks II»
+let ygoSetList = null;
+async function ygoSetsByName(q){
+  const ROM = { 1: 'i', 2: 'ii', 3: 'iii', 4: 'iv', 5: 'v', 6: 'vi', 7: 'vii', 8: 'viii', 9: 'ix', 10: 'x', 22: 'ii' };
+  const w = x => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(Boolean)
+    .map(t => (ROM[t] || t).replace(/s$/, ''));
+  const qw = w(q); if (!qw.length || qw.join('').length < 3) return [];
+  ygoSetList ||= getJSON(`${YGO}/cardsets.php`).catch(() => (ygoSetList = null, []));
+  const all = (await ygoSetList) || [];
+  const hits = all.filter(x => { const sw = w(x.set_name); return qw.every(t => sw.some(y => y === t || (t.length > 2 && y.startsWith(t)))); });
+  return hits.sort((a, b) => String(b.tcg_date || '').localeCompare(String(a.tcg_date || '')));
+}
 async function searchYugioh(q){
-  const m = q.toUpperCase().replace(/\s+/g, '').match(/^([A-Z0-9]+)-([A-Z]{0,2})(\d+)$/);
+  // el número puede llevar una letra delante: LDK2-ENK01 / ENY01 / ENJ01 (Legendary Decks II), YGLD-ENA01, DPKB-ENA01…
+  const m = q.toUpperCase().replace(/\s+/g, '').match(/^([A-Z0-9]+)-([A-Z]{0,2})([A-Z]?\d+)$/);
   if (m && OCG_REG[m[2]]) return searchYugiohOCG(q.toUpperCase().replace(/\s+/g, ''));
   if (m) {
     const typed = q.toUpperCase().replace(/\s+/g, '');
@@ -1701,6 +1714,10 @@ async function searchYugioh(q){
   }
   const r = await getJSON(`${YGO}/cardinfo.php?fname=${encodeURIComponent(q)}`);
   let cards = r?.data || [], hit = {};
+  // ¿es el nombre de una expansión? («legendary decks 2», «Legendary Decks II»…): enseña sus cartas
+  if (!cards.length) { const sets = await ygoSetsByName(q); if (sets.length === 1) return openYugiohSet(sets[0].set_name);
+    if (sets.length > 1) return renderGrid(T('{0} expansiones', sets.length), sets.slice(0, 60).map(x => ({ img: x.set_image || '', title: x.set_name,
+      sub: [x.set_code, x.tcg_date, T('{0} cartas', x.num_of_cards)].filter(Boolean).join(' · '), price: '', v: null, open: () => openYugiohSet(x.set_name) }))); }
   if (!cards.length) ({ cards, hit } = await searchYugiohLocal(q)); // no está en inglés: alemán, francés, italiano, portugués o español
   if (!cards.length) return error(T('No encontré esa carta. Prueba con el código o con su nombre en inglés, alemán, francés, italiano, portugués o español.'));
   const loc = c => hit[c.id] ? { lang: hit[c.id].lang } : null;
