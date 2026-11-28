@@ -1652,14 +1652,35 @@ async function ocgLookup(code){
   }
   return null;
 }
+// carta de YGOPRODeck por su nombre en inglés (sin la aclaración entre paréntesis si hace falta: «Obelisk the Tormentor (original)»)
+const ygoByNameCache = {};
+function ygoCardByName(en){
+  return ygoByNameCache[en] ||= (async () => {
+    let c = (await getJSON(`${YGO}/cardinfo.php?name=${encodeURIComponent(en)}`).catch(() => null))?.data?.[0];
+    if (!c && /\(/.test(en)) c = (await getJSON(`${YGO}/cardinfo.php?name=${encodeURIComponent(en.replace(/\s*\(.*\)\s*$/, ''))}`).catch(() => null))?.data?.[0];
+    return c || null;
+  })();
+}
+// todas las cartas de una expansión según Yugipedia (para completar lo que le falta a YGOPRODeck)
+async function ygpSetEntries(prefix, setName){
+  const r = await getJSON(YGP_ASK + encodeURIComponent(`[[Card number::~${prefix}-EN*]]|limit=100`)).catch(() => null);
+  const pages = [...new Set(Object.values(r?.query?.results || {}).map(x => x.fulltext.split('#')[0]))].filter(p => /\(TCG-EN\)/.test(p));
+  const clean = p => p.replace(/^Set Card Lists:/, '').replace(/\s*\((OCG|TCG)-[A-Z]+\)\s*$/, '');
+  const page = pages.find(p => clean(p).toLowerCase() === String(setName || '').toLowerCase()) || pages[0];
+  if (!page) return [];
+  const list = await (setListCache[page] ||= getJSON('https://yugipedia.com/api.php?action=query&prop=revisions&rvprop=content&rvslots=main&format=json&origin=*&titles=' + encodeURIComponent(page))
+    .then(j => parseSetList(Object.values(j?.query?.pages || {})[0]?.revisions?.[0]?.slots?.main?.['*'] || '')).catch(() => (delete setListCache[page], [])));
+  return list.filter(x => x.code.startsWith(prefix.toUpperCase() + '-'));
+}
 async function searchYugiohOCG(code){
   const f = await ocgLookup(code);
   if (!f) return error(T('No encontré ese código en las listas de Yugipedia. Revisa que esté bien escrito (ej. LOSP-JP004).'));
   const en = f.hits[0].name;
-  // la carta en YGOPRODeck por su nombre en inglés (sin la aclaración entre paréntesis si hace falta)
-  let card = (await getJSON(`${YGO}/cardinfo.php?name=${encodeURIComponent(en)}`).catch(() => null))?.data?.[0];
-  if (!card && /\(/.test(en)) card = (await getJSON(`${YGO}/cardinfo.php?name=${encodeURIComponent(en.replace(/\s*\(.*\)\s*$/, ''))}`).catch(() => null))?.data?.[0];
-  if (!card) return error(T('{0} es «{1}», una carta que solo existe en Asia y no está en la base de datos de YGOPRODeck.', code, en));
+  const card = await ygoCardByName(en);
+  if (!card) return error(T('{0} es «{1}», una carta que no está en la base de datos de YGOPRODeck.', code, en));
+  // si TCGplayer vende esa impresión (aunque YGOPRODeck no la tenga), se abre con su precio
+  if (!OCG_REG[ygpRegion(code)] && ygoVersions(card, await withTimeout(ygoPrints(card.name), 4000)).some(s => normCode(s.set_code) === normCode(code)))
+    return openYugioh(card, code);
   return openYugiohOCG(card, code, f);
 }
 const ygoLabelOf = s => s ? `${s.set_code} · ${s.set_rarity}${s.variant ? ' · ' + s.variant : ''}` : '';
@@ -1668,7 +1689,7 @@ async function openYugiohOCG(c, code, f){
   const scans = scans0 || [];
   const reg = ygpRegion(code);
   const items = [];
-  for (const h of f.hits) for (const r of h.rs) items.push({ set_code: code, set_rarity: r, set_name: f.setName, prints: [], ocg: reg, ...(h.ea ? { variant: 'Extended Art' } : {}) });
+  for (const h of f.hits) for (const r of h.rs) items.push({ set_code: code, set_rarity: r, set_name: f.setName, prints: [], ...(OCG_REG[reg] ? { ocg: reg } : { ygp: true }), ...(h.ea ? { variant: 'Extended Art' } : {}) });
   const want = pendingLabel; pendingLabel = null;
   const idx = want ? items.findIndex(s => ygoLabelOf(s).toUpperCase() === String(want).toUpperCase()) : -1;
   // referencia: la versión inglesa (TCG) más parecida, con su precio
@@ -1735,6 +1756,8 @@ async function searchYugioh(q){
         if (info && info.id) { const card = (await getJSON(`${YGO}/cardinfo.php?id=${info.id}`))?.data?.[0];
           return openYugioh(card, code, info.set_rarity, lang ? { lang, code: typed } : null); }
       }
+    // YGOPRODeck no lo tiene (p. ej. LC01-EN001, Obelisco de la Legendary Collection): lista de la expansión en Yugipedia
+    for (const n of nums) { const code = `${m[1]}-${m[2]}${n}`; if (await ocgLookup(code)) return searchYugiohOCG(code); }
     return error(T('No encontré ese código. Revisa que esté bien escrito (ej. LOB-EN001).'));
   }
   const r = await getJSON(`${YGO}/cardinfo.php?fname=${encodeURIComponent(q)}`);
@@ -1895,7 +1918,10 @@ function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
   } else if (set && Number(set.set_price)) rows.push(['#Esta edición'], [`${set.set_code} (${set.set_rarity}) · YGOPRODeck`, usd(set.set_price)]);
   if (set?.ocg) {
     rows.push(['#Carta {0} (OCG)'.replace('{0}', OCG_REG[set.ocg] || set.ocg)], [T('Expansión'), esc(set.set_name)], [T('Código'), esc(set.set_code)]);
-    if (loc.ocgRef) rows.push([T('Referencia: versión inglesa {0}', loc.ocgRef.label), loc.ocgRef.price + ` <small>(${T('no es el precio de la japonesa')})</small>`]);
+  }
+  if (set?.ygp) rows.push(['#Esta impresión'], [T('Expansión'), esc(set.set_name)], [T('Código'), esc(set.set_code)]);
+  if (set?.ocg || set?.ygp) {
+    if (loc.ocgRef) rows.push([T('Referencia: versión inglesa {0}', loc.ocgRef.label), loc.ocgRef.price + ` <small>(${T(set.ocg ? 'no es el precio de la japonesa' : 'no es el precio de esta impresión')})</small>`]);
   }
   if (loc.code) rows.push(['#Tu carta'], [`${loc.code} (${T(YLANGS[loc.lang][1])})`, `<small>${T('TCGplayer solo vende cartas en inglés: el precio es el de {0}. Para tu idioma, mira Cardmarket.', esc(set.set_code))}</small>`]);
   if (loc.names && Object.values(loc.names).some(Boolean)) {
@@ -1916,11 +1942,12 @@ function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
     updated: pr && ps.length ? T(se ? 'Cardmarket del {0}' : 'TCGplayer del {0}', fecha(pr.updated)) : '',
     versionLabel: set ? `${loc.code || set.set_code} · ${set.set_rarity}${set.variant ? ' · ' + set.variant : ''}` : '',
     meta: set ? `${esc(set.set_name)} · ${esc(loc.code || set.set_code)}${set.variant ? ' · ' + esc(ofText(set.variant)) : ''}${set.ofx ? ' · Overframe' : ''}` : esc(c.type),
-    mainLabel: set?.ocg ? 'Precio de esta edición exacta' : se ? 'Precio en Cardmarket de esta edición' : sp ? 'Precio de esta edición exacta' : approx ? 'Precio orientativo de esta edición' : set ? 'Precio de esta edición exacta' : 'Precio en Cardmarket (desde)',
+    mainLabel: set?.ocg || set?.ygp ? 'Precio de esta edición exacta' : se ? 'Precio en Cardmarket de esta edición' : sp ? 'Precio de esta edición exacta' : approx ? 'Precio orientativo de esta edición' : set ? 'Precio de esta edición exacta' : 'Precio en Cardmarket (desde)',
     mainValue: se ? eur(se) : sp ? usd(sp) : approx ? usd(approx) : set ? '' : eur(p.cardmarket_price) || usd(p.tcgplayer_price),
-    approx: set?.ocg ? 'Cardmarket y TCGplayer no venden cartas del OCG (Japón y Asia): no hay precio público de esta impresión. Abajo tienes el precio de la versión inglesa como referencia y enlaces a tiendas japonesas.'
+    approx: set?.ygp ? 'Esta impresión no está a la venta con este código en TCGplayer ni en Cardmarket: no hay precio público. Abajo tienes el precio de la misma carta en otra edición como referencia.'
+      : set?.ocg ? 'Cardmarket y TCGplayer no venden cartas del OCG (Japón y Asia): no hay precio público de esta impresión. Abajo tienes el precio de la versión inglesa como referencia y enlaces a tiendas japonesas.'
       : se && chosen.ea ? 'Cardmarket no separa bien las versiones de esta carta en esta expansión: precio aproximado.' : approx ? 'TCGplayer no vende esta impresión; dato de YGOPRODeck, puede estar desactualizado.' : set && !sp ? 'TCGplayer no tiene precio de esta impresión ahora mismo.' : '',
-    value: set?.ocg ? null : se || sp || approx || Number(p.cardmarket_price) || null,
+    value: set?.ocg || set?.ygp ? null : se || sp || approx || Number(p.cardmarket_price) || null,
     hist: se ? { cur: 'EUR', now: se, avg30: chosen.e30, game: 'yugioh', id: chosen.id,
         pts: [['Media 30 días', chosen.e30], ['Media 7 días', chosen.e7], ['Media último día', chosen.e1], ['Hoy', se]] }
       : sp ? { cur: 'USD', now: sp, game: 'yugioh', id: chosen.id, pts: [] } : null,
@@ -1932,7 +1959,7 @@ function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
             ...(set?.ocg ? [['Lista de la expansión (Yugipedia)', `https://yugipedia.com/wiki/Special:Search?search=${encodeURIComponent(set.set_code)}`]] : []),
             ['Ficha', c.ygoprodeck_url], ['Foto (Yugipedia)', scan ? `https://yugipedia.com/wiki/File:${encodeURIComponent(scan.file)}` : null]],
     reload: async () => { const n = (await getJSON(`${YGO}/cardinfo.php?id=${c.id}`))?.data?.[0]; if (n) { Object.assign(c, n); drawCurrent(); } },
-    openSet: set && !set.ocg ? () => openYugiohSet(set.set_name) : null,
+    openSet: set && !set.ocg && !set.ygp ? () => openYugiohSet(set.set_name) : null,
     howto: async () => {
       // texto de la carta en francés, alemán o italiano si YGOPRODeck lo tiene
       if (['fr', 'de', 'it'].includes(LANG)) {
@@ -1963,6 +1990,24 @@ async function openYugiohSet(name){
     real: () => ygoRealImg(c, s.set_code, s.set_rarity, true, isOF(s)),
     price: sh ? sh.t : v ? '≈ ' + usd(v) : '', v, code: s.set_code,
     open: () => openYugioh(c, s.set_code.toUpperCase(), s.set_rarity, null, s.variant) });
+    }
+  }
+  // completa con la lista de Yugipedia las cartas que YGOPRODeck no tiene (p. ej. los 3 Dioses de la Legendary Collection)
+  const prefix = (items[0]?.code || '').split('-')[0] || (((await ygoSetList) || []).find(x => x.set_name === name)?.set_code) || '';
+  if (prefix) {
+    const have = new Set(items.map(i => normCode(i.code)));
+    const miss = ((await withTimeout(ygpSetEntries(prefix, name), 6000)) || []).filter(h => !have.has(normCode(h.code)));
+    const cs = await withTimeout(Promise.all(miss.map(h => ygoCardByName(h.name))), 6000) || [];
+    for (const [k, h] of miss.entries()) {
+      const c = cs[k];
+      const vs = c ? ygoVersions(c, await withTimeout(ygoPrints(c.name), 3000)).filter(s => normCode(s.set_code) === normCode(h.code)) : [];
+      if (vs.length) for (const s of vs) { const sh = s.prints?.length ? shownPrice(s.prints) : null;
+        items.push({ img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${s.set_rarity}${isOF(s) ? ' · 🖼️ Overframe' : ''}`,
+          real: () => ygoRealImg(c, s.set_code, s.set_rarity, true, isOF(s)), price: sh ? sh.t : '', v: sh?.n ?? null, code: s.set_code,
+          open: () => openYugioh(c, s.set_code.toUpperCase(), s.set_rarity, null, s.variant) }); }
+      else items.push({ img: c?.card_images?.[0]?.image_url_small || '', title: h.name, sub: `${h.code} · ${h.rs.join(', ')}${h.ea ? ' · 🖼️ Overframe' : ''}`,
+        real: c ? () => ygoRealImg(c, h.code, h.rs[0], true, h.ea) : undefined, price: '', v: null, code: h.code,
+        open: () => searchYugiohOCG(h.code) });
     }
   }
   items.sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true }));
