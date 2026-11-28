@@ -1695,7 +1695,22 @@ async function ygoSetsByName(q){
   const hits = all.filter(x => { const sw = w(x.set_name); return qw.every(t => sw.some(y => y === t || (t.length > 2 && y.startsWith(t)))); });
   return hits.sort((a, b) => String(b.tcg_date || '').localeCompare(String(a.tcg_date || '')));
 }
+// Expansiones por su código (EGO1, LDK2…). Tolera las letras que se confunden con números: EG01 = EGO1, LD1 = LDI…
+const codeKey = c => String(c || '').toUpperCase().replace(/O/g, '0').replace(/[IL]/g, '1').replace(/S/g, '5').replace(/B/g, '8').replace(/Z/g, '2');
+async function ygoSetsByCode(prefix){
+  ygoSetList ||= getJSON(`${YGO}/cardsets.php`).catch(() => (ygoSetList = null, []));
+  const all = (await ygoSetList) || [];
+  const P = String(prefix).toUpperCase();
+  const exact = all.filter(x => String(x.set_code).toUpperCase() === P);
+  return exact.length ? exact : all.filter(x => codeKey(x.set_code) === codeKey(P));
+}
 async function searchYugioh(q){
+  // solo el código de la expansión («EGO1», «EG01-EN», «LDK2»): enseña todas sus cartas
+  const sc = q.toUpperCase().replace(/\s+/g, '').match(/^([A-Z0-9]{2,5})(?:-[A-Z]{0,2})?$/);
+  if (sc && (/\d/.test(sc[1]) || q.includes('-'))) { const sets = await ygoSetsByCode(sc[1]);
+    if (sets.length === 1) return openYugiohSet(sets[0].set_name);
+    if (sets.length > 1) return renderGrid(T('{0} expansiones', sets.length), sets.map(x => ({ img: x.set_image || '', title: x.set_name,
+      sub: [x.set_code, x.tcg_date, T('{0} cartas', x.num_of_cards)].filter(Boolean).join(' · '), price: '', v: null, open: () => openYugiohSet(x.set_name) }))); }
   // el número puede llevar una letra delante: LDK2-ENK01 / ENY01 / ENJ01 (Legendary Decks II), YGLD-ENA01, DPKB-ENA01…
   const m = q.toUpperCase().replace(/\s+/g, '').match(/^([A-Z0-9]+)-([A-Z]{0,2})([A-Z]?\d+)$/);
   if (m && OCG_REG[m[2]]) return searchYugiohOCG(q.toUpperCase().replace(/\s+/g, ''));
@@ -1713,6 +1728,13 @@ async function searchYugioh(q){
         return openYugioh(card, code, info.set_rarity, lang ? { lang, code: typed } : null);
       }
     }
+    // ¿la expansión está mal escrita (EG01 en vez de EGO1)? prueba con los códigos de expansión parecidos
+    for (const x of (await ygoSetsByCode(m[1])).filter(x => String(x.set_code).toUpperCase() !== m[1]))
+      for (const n of nums) for (const code of [`${x.set_code}-${m[2] || 'EN'}${n}`, `${x.set_code}-EN${n}`]) {
+        const info = await getJSON(`${YGO}/cardsetsinfo.php?setcode=${encodeURIComponent(code)}`).catch(() => null);
+        if (info && info.id) { const card = (await getJSON(`${YGO}/cardinfo.php?id=${info.id}`))?.data?.[0];
+          return openYugioh(card, code, info.set_rarity, lang ? { lang, code: typed } : null); }
+      }
     return error(T('No encontré ese código. Revisa que esté bien escrito (ej. LOB-EN001).'));
   }
   const r = await getJSON(`${YGO}/cardinfo.php?fname=${encodeURIComponent(q)}`);
