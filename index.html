@@ -1702,7 +1702,10 @@ async function searchYugioh(q){
   if (m) {
     const typed = q.toUpperCase().replace(/\s+/g, '');
     const lang = CODE_LANG[m[2]] || null;
-    const tries = [typed, `${m[1]}-EN${m[3]}`, `${m[1]}-${m[3]}`, `${m[1]}-E${m[3]}`];
+    // el número con 2 o 3 cifras: LEDD-ENA001 -> LEDD-ENA01 (y al revés), por si se escribe con un cero de más o de menos
+    const [, L = '', D = ''] = m[3].match(/^([A-Z]?)(\d+)$/) || [];
+    const nums = [...new Set([m[3], ...[2, 3].map(w => L + String(Number(D)).padStart(w, '0'))])];
+    const tries = nums.flatMap(n => [`${m[1]}-${m[2]}${n}`, `${m[1]}-EN${n}`, `${m[1]}-${n}`, `${m[1]}-E${n}`]);
     for (const code of [...new Set(tries)]) {
       const info = await getJSON(`${YGO}/cardsetsinfo.php?setcode=${encodeURIComponent(code)}`).catch(() => null);
       if (info && info.id) {
