@@ -1722,7 +1722,9 @@ const ygoNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u
 const ygoShard = n => ygoNorm(n).replace(/ /g, '').slice(0, 2).padEnd(2, '_');
 // «Overframe» (en inglés «Extended Art»): el dibujo sale del marco. Es otra versión de la carta, con otro precio.
 // TCGplayer la llama «Extended Art» y así se guarda en la colección; en pantalla se enseña como Overframe.
-const isOF = s => /extended art|overframe/i.test(typeof s === 'string' ? s : s?.variant || '');
+// ofx: Starlight / Grand Master Rare de un código que tiene Overframe: también lo son, aunque TCGplayer no lo ponga
+// (p. ej. MAMS-EN013: Ultra Rare, Starlight y GMR Overframe según la lista de Yugipedia)
+const isOF = s => typeof s === 'string' ? /extended art|overframe/i.test(s) : !!s?.ofx || /extended art|overframe/i.test(s?.variant || '');
 const ofText = t => String(t || '').replace(/Extended Art/g, 'Overframe');
 const OF_BADGE = '<span class="ofb" title="Overframe (Extended Art): el dibujo sale del marco">🖼️ Overframe</span>';
 // Grand Master Rare: tirada muy corta con número de serie
@@ -1756,8 +1758,10 @@ function ygoVersions(c, pr){
     // una versión por rareza y variante de arte (p. ej. RA04-EN106 Dark Magician: Arkana, 6th Art, 7th Art…)
     const byR = {};
     for (const e of byCode[k]) (byR[(e.r || '—') + '|' + (e.v || '')] ||= []).push(e);
+    const hasOF = byCode[k].some(e => /extended art/i.test(e.v || ''));
     for (const [key, prints] of Object.entries(byR)) { const [r, variant] = key.split('|');
-      out.push({ set_code: code, set_rarity: r, set_name: setName, prints, ...(variant ? { variant } : {}) }); }
+      const ofx = (hasOF && /starlight|grand master/i.test(r) && !/extended art/i.test(variant)) || prints.some(e => e.of);
+      out.push({ set_code: code, set_rarity: r, set_name: setName, prints, ...(variant ? { variant } : {}), ...(ofx ? { ofx: true } : {}) }); }
   };
   for (const s of ysets) {
     const k = normCode(s.set_code);
@@ -1869,7 +1873,7 @@ function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
     alts,
     updated: pr && ps.length ? T(se ? 'Cardmarket del {0}' : 'TCGplayer del {0}', fecha(pr.updated)) : '',
     versionLabel: set ? `${loc.code || set.set_code} · ${set.set_rarity}${set.variant ? ' · ' + set.variant : ''}` : '',
-    meta: set ? `${esc(set.set_name)} · ${esc(loc.code || set.set_code)}${set.variant ? ' · ' + esc(ofText(set.variant)) : ''}` : esc(c.type),
+    meta: set ? `${esc(set.set_name)} · ${esc(loc.code || set.set_code)}${set.variant ? ' · ' + esc(ofText(set.variant)) : ''}${set.ofx ? ' · Overframe' : ''}` : esc(c.type),
     mainLabel: set?.ocg ? 'Precio de esta edición exacta' : se ? 'Precio en Cardmarket de esta edición' : sp ? 'Precio de esta edición exacta' : approx ? 'Precio orientativo de esta edición' : set ? 'Precio de esta edición exacta' : 'Precio en Cardmarket (desde)',
     mainValue: se ? eur(se) : sp ? usd(sp) : approx ? usd(approx) : set ? '' : eur(p.cardmarket_price) || usd(p.tcgplayer_price),
     approx: set?.ocg ? 'Cardmarket y TCGplayer no venden cartas del OCG (Japón y Asia): no hay precio público de esta impresión. Abajo tienes el precio de la versión inglesa como referencia y enlaces a tiendas japonesas.'
@@ -1913,7 +1917,7 @@ async function openYugiohSet(name){
       const sh = s.prints ? shownPrice(s.prints) : null;
       const v = s.prints ? sh?.n ?? null : Number(s.set_price) || null;
       items.push({
-    img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${isGMR(s) ? '🏆 ' : isStR(s) ? '✨ ' : ''}${s.set_rarity}${s.variant ? ' · ' + (isOF(s) ? '🖼️ ' : '') + ofText(s.variant) : ''}`,
+    img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${isGMR(s) ? '🏆 ' : isStR(s) ? '✨ ' : ''}${s.set_rarity}${s.variant ? ' · ' + (isOF(s) ? '🖼️ ' : '') + ofText(s.variant) : ''}${s.ofx ? ' · 🖼️ Overframe' : ''}`,
     real: () => ygoRealImg(c, s.set_code, s.set_rarity, true, isOF(s)),
     price: sh ? sh.t : v ? '≈ ' + usd(v) : '', v, code: s.set_code,
     open: () => openYugioh(c, s.set_code.toUpperCase(), s.set_rarity, null, s.variant) });
@@ -2851,7 +2855,7 @@ function homeHTML(){
       return last.length ? `<div class="hmedals">${last.map(([id, ico, name]) => `<span class="hmedal" title="${esc(T(name))}"><i>${ico}</i>${T(name)}</span>`).join('')}<span class="hmedal more">${ACH.filter(a => S.ach[a[0]]).length}/${ACH.length} 🎖️</span></div>` : ''; })()}
     <button class="hmore" data-go="progress">${T('Todas las misiones y logros')} ›</button></div>` : ''}
 
-  ${top.length ? `<div class="gxsec"><h3>✨ ${T('Tus cartas destacadas')} <small>${cs.cur}</small></h3><div class="top5">${top.map((i, k) => cardTile(i.img, i.name, fm(i.value, i.cur), `data-col="${esc(i.__id)}"`, k + 1, i.game, histOf(i), i.game === 'yugioh' && { of: isOF(i.label), gmr: isGMR(i.rarity || i.label), str: isStR(i.rarity || i.label) })).join('')}</div></div>` : ''}
+  ${top.length ? `<div class="gxsec"><h3>✨ ${T('Tus cartas destacadas')} <small>${cs.cur}</small></h3><div class="top5">${top.map((i, k) => cardTile(i.img, i.name, fm(i.value, i.cur), `data-col="${esc(i.__id)}"`, k + 1, i.game, histOf(i), i.game === 'yugioh' && { of: i.of || isOF(i.label), gmr: isGMR(i.rarity || i.label), str: isStR(i.rarity || i.label) })).join('')}</div></div>` : ''}
   ${rec.length ? `<div class="gxsec"><h3>🕒 ${T('Vistas recientemente')}</h3><div class="top5">${rec.map(r => cardTile(r.i, r.n, r.p.length ? fm(r.p.at(-1)[1], r.c) : '', `data-g="${esc(r.g)}" data-rq="${esc(r.q || r.n)}" data-s="${r.s ? 1 : 0}"`, 0, r.g, r.p)).join('')}</div></div>` : ''}
 
   <div class="gxsec"><h3>📈 ${T('Evolución del mercado')} <small>${T('cartas que sigues')}</small></h3>
@@ -3433,7 +3437,7 @@ function cardFrom(v){
   const code = label ? label.split(' · ')[0] : '';
   const price = plain(v.mainValue);
   return {
-    game, name: v.name || '', label, rarity: v.rarity || '',
+    game, name: v.name || '', label, rarity: v.rarity || '', ...(v.overframe ? { of: true } : {}),
     set: (meta.split(' · ')[0] || '').trim(),
     img: v.img && !v.img.startsWith('data:') ? v.img : '', q: code && game === 'yugioh' ? code : ($('q').value.trim() || v.name || ''),
     value: Number(v.value) || null, price, cur: curOf(price),
@@ -3615,7 +3619,7 @@ function showMine(view, keep){
     const hit = i.target && i.value && i.value <= i.target;
     return `<div class="mrow" data-id="${esc(idOf(i))}">
       ${i.img ? `<img src="${esc(i.img)}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}
-      <div class="mi"><button class="link mopen">${esc(i.name)}</button>${i.game === 'yugioh' && isOF(i.label) ? ' ' + OF_BADGE : ''}${i.game === 'yugioh' && isGMR(i.rarity || i.label) ? ' ' + GMR_BADGE : ''}${i.game === 'yugioh' && isStR(i.rarity || i.label) ? ' ' + STR_BADGE : ''}
+      <div class="mi"><button class="link mopen">${esc(i.name)}</button>${i.game === 'yugioh' && (i.of || isOF(i.label)) ? ' ' + OF_BADGE : ''}${i.game === 'yugioh' && isGMR(i.rarity || i.label) ? ' ' + GMR_BADGE : ''}${i.game === 'yugioh' && isStR(i.rarity || i.label) ? ' ' + STR_BADGE : ''}
         <div class="note">${esc(ofText([i.label, groupBy === 'rarity' ? i.set : i.rarity].filter(Boolean).join(' · ')))}</div>
         <div class="note"><b>${esc(i.price || '')}</b>${window.pcSpark ? window.pcSpark(window.pcHistOf?.(i)) : ''}${ch != null ? ` <span class="${ch >= 0 ? 'up' : 'down'}">${ch >= 0 ? '▲' : '▼'}${Math.abs(ch).toFixed(1)}%</span>` : ''}
           ${i.buy != null ? ` · ${T('Compra')}: ${fmt(i.buy, i.buyCur || i.cur) || '0'}${ipl != null ? ` <span class="${ipl >= 0 ? 'up' : 'down'}">(${ipl >= 0 ? '+' : '−'}${fmt(Math.abs(ipl), i.cur) || '0'})</span>` : ''}` : ''}

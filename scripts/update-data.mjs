@@ -213,7 +213,10 @@ function matchPrintsCardmarket(prints, cm){
   // Overframe (TCGplayer: "Extended Art"). Cardmarket puede marcarlo en el nombre del producto.
   const OF_RE = /overframe|extended art|\bEA\b/i;
   const cmOF = p => OF_RE.test(p.name.replace(/^[^(]*/, ''));
-  const tcgOF = x => /extended art/i.test(x.n) || /extended art/i.test(x.v || '');
+  // Starlight / Grand Master Rare de un código con Overframe: también son Overframe (TCGplayer no lo pone)
+  const ofCodes = new Set(prints.filter(x => /extended art/i.test(x.n)).map(x => x.c));
+  for (const x of prints) if (!/extended art/i.test(x.n) && ofCodes.has(x.c) && /starlight|grand master/i.test(x.r)) x.of = 1;
+  const tcgOF = x => /extended art/i.test(x.n) || /extended art/i.test(x.v || '') || !!x.of;
   const rarOf = p => { const m = p.name.match(/\(V\.\d+\s*-\s*(.*)\)\s*$/i); if (!m) return '';
     return m[1].replace(/\(?\s*(overframe|extended art|EA)\s*\)?/ig, ' ').replace(/[()]/g, ' ').replace(/[-\s]+$/, '').replace(/\s+/g, ' ').trim().toLowerCase(); };
   const price = p => cmPrice(cm.prices[p.idProduct]);
@@ -370,6 +373,7 @@ async function writePrints(key, prints){
   const variant = n => [...String(n).matchAll(/\(([^()]+)\)/g)].map(m => m[1]).filter(t => !/rare|edition|parallel/i.test(t)).join(' · ');
   for (const x of prints) { const k = norm(x.n), v = variant(x.n);
     ((shards[shardOf(x.n)] ||= {})[k] ||= []).push({ c: x.c, r: x.r, g: x.g, id: x.id, p: x.p, ...(v ? { v } : {}),
+      ...(x.of ? { of: 1 } : {}),
       ...(x.cm ? { cm: x.cm, e: x.e, el: x.el, e30: x.e30, e1: x.e1, e7: x.e7, ...(x.ea ? { ea: 1 } : {}) } : {}) }); }
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });
