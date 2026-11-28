@@ -112,6 +112,18 @@ window.PC_BG = /[?&]bg=1\b/.test(location.search) && window.parent !== window;</
   .msg.err{color:var(--bad)}
   .result{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;grid-template-columns:260px 1fr;gap:22px;touch-action:pan-y}
   .pic{position:relative}
+  /* Overframe (Extended Art) */
+  .ofrib{position:absolute;top:8px;left:8px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.02em;
+    color:#1b1030;background:linear-gradient(90deg,#ffd76a,#ff9de2,#9ad8ff);box-shadow:0 2px 8px rgba(0,0,0,.35);pointer-events:none}
+  .oft{position:absolute;top:4px;left:50%;transform:translateX(-50%);z-index:2;padding:1px 6px;border-radius:999px;font-size:9.5px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.03em;color:#1b1030;background:linear-gradient(90deg,#ffd76a,#ff9de2,#9ad8ff);white-space:nowrap;pointer-events:none}
+  .tile.of{border-color:#e0a3ff}
+  .ofb{display:inline-block;vertical-align:middle;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:800;color:#1b1030;
+    background:linear-gradient(90deg,#ffd76a,#ff9de2,#9ad8ff)}
+  .rar.ofr{color:#1b1030;background:linear-gradient(90deg,#ffd76a,#ff9de2,#9ad8ff)}
+  .chip.ofc{border-color:#e0a3ff}
+  .top5 .oft{top:24px}
+  .ofnote{font-size:12.5px;color:var(--muted);margin:-4px 0 12px}
   .pic img{width:100%;border-radius:10px;display:block;min-height:120px;background:var(--line)}
   .pic.loading img{opacity:.35}
   .altrow{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 2px}
@@ -947,10 +959,12 @@ function jump(i){
   drawCurrent();
 }
 
+// filtro de rareza: '__of' = solo las Overframe
+const rarOk = (l, r) => !r || (r === '__of' ? !!l?.of : l?.r === r);
 // Orden y filtro de las versiones (lo usan el selector y las flechas ‹ ›)
 function versionOrder(labels, vf){
   const qn = normName(vf?.q || '');
-  const ks = labels.map((l, k) => k).filter(k => (!vf?.rar || labels[k].r === vf.rar) &&
+  const ks = labels.map((l, k) => k).filter(k => rarOk(labels[k], vf?.rar) &&
     (!qn || normName([labels[k].t, labels[k].r].join(' ')).includes(qn)));
   const num = k => labels[k].n ?? null;
   if (vf?.sort === 'hi') ks.sort((a, b) => (num(b) ?? -1) - (num(a) ?? -1));
@@ -970,7 +984,8 @@ function drawPicker(){
   const rars = [];
   labels.forEach((l, k) => { if (l.r && !rars.some(x => x.r === l.r)) rars.push({ r: l.r, k, count: 0 }); });
   labels.forEach(l => { const x = rars.find(x => x.r === l.r); if (x) x.count++; });
-  if (vf.rar && !rars.some(x => x.r === vf.rar)) vf.rar = '';
+  const nOF = labels.filter(l => l.of).length;
+  if (vf.rar && !(vf.rar === '__of' ? nOF : rars.some(x => x.r === vf.rar))) vf.rar = '';
   let ks = versionOrder(labels, vf);
   const num = k => labels[k].n ?? null;
   const priced = labels.map((l, k) => k).filter(k => num(k) != null);
@@ -988,21 +1003,21 @@ function drawPicker(){
       <button class="chip${i === kMin ? ' on' : ''}" id="vmin">🪙 ${T('La más barata')} · ${labels[kMin].p || ''}</button></div>` : ''}
     <p class="lbl2">${filtered ? T('{0} de {1} versiones', ks.length, n) + ` <button class="link vclear" id="vclear">✕ ${T('Quitar filtros')}</button>` : T('Desliza para ver todas las versiones ({0})', n)}</p>
     ${ks.length ? `<div class="rail" id="rail">${ks.map(k => { const l = labels[k];
-      return `<button class="tile${k === i ? ' on' : ''}${l.rep ? ' rep' : ''}" data-k="${k}" title="${esc([l.t, l.r].filter(Boolean).join(' · '))}">
-        ${l.i ? `<img src="${l.i}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}
+      return `<button class="tile${k === i ? ' on' : ''}${l.rep ? ' rep' : ''}${l.of ? ' of' : ''}" data-k="${k}" title="${esc(ofText([l.t, l.r].filter(Boolean).join(' · ')))}">
+        ${l.of ? '<span class="oft">Overframe</span>' : ''}${l.i ? `<img src="${l.i}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}
         <span class="tr">${esc(l.r || '—')}</span><span class="tp">${l.p || '·'}</span></button>`; }).join('')}</div>`
       : `<p class="note">${T('Ninguna versión coincide con el filtro.')}</p>`}
-    ${rars.length > 1 ? `<p class="lbl2">${T('Todas las rarezas de esta carta ({0})', rars.length)}</p>
-      ${rars.length <= 24 ? `<div class="chips"><button class="chip${!vf.rar ? ' on' : ''}" data-r="">${T('Todas')}</button>${rars.map(x =>
+    ${rars.length > 1 || nOF ? `<p class="lbl2">${T('Todas las rarezas de esta carta ({0})', rars.length)}</p>
+      ${rars.length <= 24 ? `<div class="chips"><button class="chip${!vf.rar ? ' on' : ''}" data-r="">${T('Todas')}</button>${nOF ? `<button class="chip ofc${vf.rar === '__of' ? ' on' : ''}" data-r="__of">🖼️ Overframe<small>×${nOF}</small></button>` : ''}${rars.map(x =>
         `<button class="chip${x.r === vf.rar ? ' on' : ''}" data-r="${esc(x.r)}">${esc(x.r)}${x.count > 1 ? `<small>×${x.count}</small>` : ''}</button>`).join('')}</div>`
-      : `<select id="vrar"><option value="">${T('Todas')}</option>${rars.map(x => `<option${x.r === vf.rar ? ' selected' : ''}>${esc(x.r)}</option>`).join('')}</select>`}` : ''}
+      : `<select id="vrar"><option value="">${T('Todas')}</option>${nOF ? `<option value="__of"${vf.rar === '__of' ? ' selected' : ''}>🖼️ Overframe</option>` : ''}${rars.map(x => `<option${x.r === vf.rar ? ' selected' : ''}>${esc(x.r)}</option>`).join('')}</select>`}` : ''}
     <p class="lbl2">${T('Elige la versión')}</p>
     <select id="vsel">${(ks.includes(i) ? ks : [i, ...ks]).map(k => { const l = labels[k];
-      return `<option value="${k}"${k === i ? ' selected' : ''}>${k + 1}. ${esc([l.t, l.r && !String(l.t).includes(l.r) ? l.r : ''].filter(Boolean).join(' · '))}${l.p ? ' — ' + l.p : ''}</option>`; }).join('')}</select>`;
+      return `<option value="${k}"${k === i ? ' selected' : ''}>${k + 1}. ${l.of ? '🖼️ ' : ''}${esc(ofText([l.t, l.r && !String(l.t).includes(l.r) ? l.r : ''].filter(Boolean).join(' · ')))}${l.p ? ' — ' + l.p : ''}</option>`; }).join('')}</select>`;
   const setRar = r => {
     vf.rar = r;
-    const inR = k => !r || labels[k].r === r;
-    if (r && !inR(i)) { const first = ks.find(inR) ?? labels.findIndex(l => l.r === r); if (first >= 0) return jump(first); }
+    const inR = k => rarOk(labels[k], r);
+    if (r && !inR(i)) { const first = ks.find(inR) ?? labels.findIndex((l, k) => inR(k)); if (first >= 0) return jump(first); }
     drawPicker();
   };
   box.querySelectorAll('.chips .chip').forEach(b => b.onclick = () => setRar(b.dataset.r === vf.rar ? '' : b.dataset.r));
@@ -1062,12 +1077,13 @@ function render(v){
     <div class="result" id="result">
       <div class="pic">
         <img src="${v.img || NOIMG}" alt="${esc(v.name)}"${slideDir ? ` class="slide${slideDir > 0 ? 'R' : 'L'}"` : ''}>
+        ${v.overframe ? '<span class="ofrib">🖼️ Overframe</span>' : ''}
         ${v.alts ? `<div class="alts"><p class="replica">${T('Con este código se imprimieron varias versiones. Toca la tuya:')}</p><div class="altrow">${v.alts.map((a, k) =>
           `<button class="alt${k === 0 ? ' on' : ''}" data-k="${k}"><img src="${ygpThumb(a.url)}" alt="" loading="lazy"><span>${esc(a.label)}</span></button>`).join('')}</div></div>` : ''}
         ${v.replica ? `<p class="replica">${T('⚠️ No hay foto de esta impresión oficial: la imagen es solo de referencia (réplica de YGOPRODeck, «Not For Use in Sanctioned Tournaments»).')}</p>` : ''}
         ${n > 1 ? `<div class="nav">
             <button class="arrow" id="prev" aria-label="${T('Versión anterior')}">‹</button>
-            <div class="vlabel"><b>${T('Versión {0} de {1}', i + 1, n)}</b>${esc(v.versionLabel || v.rarity || '')}</div>
+            <div class="vlabel"><b>${T('Versión {0} de {1}', i + 1, n)}</b>${v.overframe ? '🖼️ ' : ''}${esc(ofText(v.versionLabel || v.rarity || ''))}</div>
             <button class="arrow" id="next" aria-label="${T('Versión siguiente')}">›</button>
           </div>${dots}` : ''}
       </div>
@@ -1075,7 +1091,8 @@ function render(v){
         <p class="name">${esc(v.name)}</p>
         ${v.subname ? `<p class="meta">${esc(v.subname)}</p>` : ''}
         <p class="meta">${v.meta}</p>
-        ${v.rarity ? `<span class="rar">✦ ${esc(v.rarity)}</span>` : ''}
+        ${v.rarity ? `<span class="rar">✦ ${esc(v.rarity)}</span>` : ''}${v.overframe ? ` <span class="rar ofr">🖼️ Overframe</span>` : ''}
+        ${v.overframe ? `<p class="ofnote">${T('Versión Overframe (Extended Art): el dibujo sale del marco. Tiene un precio distinto al de la versión normal.')}${v.ofNoScan ? ' ' + T('Yugipedia aún no tiene foto de la versión Overframe: la imagen es la de la normal.') : ''}</p>` : ''}
         <div class="big"><div class="lbl">${T(v.mainLabel)}</div><div class="val">${v.mainValue || T('Sin precio')}</div>
           ${v.approx ? `<div class="approx">${T(v.approx)}</div>` : ''}
           ${v.hist ? '<div class="trend" id="trend"></div>' : ''}
@@ -1507,17 +1524,19 @@ function ygpRegion(code){
 }
 // Elige el escaneo que corresponde a esa impresión (o null si Yugipedia no lo tiene)
 // Todas las impresiones reales que encajan con ese código y rareza (p. ej. LOB-EN001: original, reimpresión y 25 aniversario)
-function scanGroup(scans, code, rarity){
-  const best = pickScan(scans, code, rarity);
+function scanGroup(scans, code, rarity, of){
+  const best = pickScan(scans, code, rarity, of);
   if (!best) return [];
-  const g = scans.filter(x => x.set === best.set && x.reg === best.reg && x.rar === best.rar && !x.extra.some(e => /^(German|Italian|French|Spanish|Portuguese|GC|OP)$/.test(e)));
+  const ea = best.extra.includes('EA');
+  const g = scans.filter(x => x.set === best.set && x.reg === best.reg && x.rar === best.rar && x.extra.includes('EA') === ea && !x.extra.some(e => /^(German|Italian|French|Spanish|Portuguese|GC|OP)$/.test(e)));
   const ord = x => (x.extra.length ? 10 : 0) + ({ '1E': 0, 'UE': 1, 'LE': 2 }[x.ed] ?? 3);
   return [best, ...g.filter(x => x !== best).sort((a, b) => ord(a) - ord(b))];
 }
 const ED_NAME = { '1E': '1ª edición', 'UE': 'Edición ilimitada', 'LE': 'Edición limitada', 'DT': 'Duel Terminal' };
 const EXTRA_NAME = { 'Reprint': 'Reimpresión', '25thAnniversaryEdition': '25 aniversario' };
 const scanLabel = x => [T(ED_NAME[x.ed] || x.ed || ''), ...x.extra.map(e => T(EXTRA_NAME[e] || e))].filter(Boolean).join(' · ');
-function pickScan(scans, code, rarity){
+// of = true: versión Overframe (Yugipedia la marca con «-EA»); false: la normal; undefined: cualquiera
+function pickScan(scans, code, rarity, of){
   if (!scans?.length) return null;
   const set = code ? String(code).toUpperCase().split('-')[0] : null;
   const reg = code ? ygpRegion(code) : 'EN';
@@ -1528,7 +1547,10 @@ function pickScan(scans, code, rarity){
     let sc = 0;
     if (x.reg === reg) sc += 8; else if (['EN', 'NA', 'EU'].includes(x.reg) && ['EN', 'NA', 'EU'].includes(reg)) sc += 3; else if (code) continue;
     if (ab.length) { if (ab[0] === x.rar) sc += 6; else if (ab.includes(x.rar)) sc += 4; else continue; } // otra rareza = otra carta
-    if (!x.extra.length) sc += 2;
+    const ea = x.extra.includes('EA');
+    if (of === false && ea) continue;           // la normal nunca enseña la foto Overframe
+    if (of && ea) sc += 10;                     // la Overframe, su foto (si Yugipedia la tiene)
+    if (!x.extra.filter(e => e !== 'EA').length) sc += 2;
     if (x.ed === '1E') sc += 1;
     if (sc > bs) { bs = sc; best = x; }
   }
@@ -1539,9 +1561,9 @@ const ygpThumb = u => { const m = u?.match(/^(https:\/\/img\.yugipedia\.com\/)(.
 document.addEventListener('error', e => { const im = e.target;
   if (im?.tagName === 'IMG' && /img\.yugipedia\.com\/thumb\//.test(im.src)) im.src = im.src.replace('/thumb/', '/').replace(/\/[^/]+$/, ''); }, true);
 const withTimeout = (p, ms) => Promise.race([p, new Promise(ok => setTimeout(() => ok(null), ms))]);
-async function ygoRealImg(c, code, rarity, small){
+async function ygoRealImg(c, code, rarity, small, of){
   const prefix = code ? String(code).toUpperCase().split('-')[0] : null;
-  const s = pickScan(await ygpScans(c.name, prefix), code, rarity);
+  const s = pickScan(await ygpScans(c.name, prefix), code, rarity, of);
   return s ? (small ? ygpThumb(s.url) : s.url) : null;
 }
 // Idioma según el código impreso: LOB-DE001 / LOB-G001 (alemán), -FR/-F, -IT/-I, -PT/-P, -SP/-S
@@ -1621,6 +1643,12 @@ async function searchYugioh(q){
 const ygoNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   .replace(/\(.*?\)|\[.*?\]/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
 const ygoShard = n => ygoNorm(n).replace(/ /g, '').slice(0, 2).padEnd(2, '_');
+// «Overframe» (en inglés «Extended Art»): el dibujo sale del marco. Es otra versión de la carta, con otro precio.
+// TCGplayer la llama «Extended Art» y así se guarda en la colección; en pantalla se enseña como Overframe.
+const isOF = s => /extended art|overframe/i.test(typeof s === 'string' ? s : s?.variant || '');
+const ofText = t => String(t || '').replace(/Extended Art/g, 'Overframe');
+const OF_BADGE = '<span class="ofb" title="Overframe (Extended Art): el dibujo sale del marco">🖼️ Overframe</span>';
+let pendingLabel = null; // versión guardada en la colección que hay que abrir (ver openItem)
 const printCache = {};
 async function ygoPrints(name){
   const k = ygoShard(name);
@@ -1686,22 +1714,26 @@ async function openYugioh(c, code, rarity, local = null, variant = null){
   // escaneos reales de todas las impresiones de la carta (una sola consulta) + precios por impresión
   const [scans0, pr] = await Promise.all([withTimeout(ygpScans(c.name), 4000), withTimeout(ygoPrints(c.name), 4000)]);
   const scans = scans0 || [];
-  const real = s => s && pickScan(scans, s.set_code, s.set_rarity);
+  const real = s => s && pickScan(scans, s.set_code, s.set_rarity, isOF(s));
   const vers = ygoVersions(c, pr);
   const items = vers.length ? vers : [null];
   // primero la edición buscada (por código; la rareza de YGOPRODeck puede no coincidir con la real)
   const cc = code && normCode(code);
-  let idx = cc ? items.findIndex(s => s && normCode(s.set_code) === cc && (!rarity || s.set_rarity === rarity) && (!variant || s.variant === variant)) : -1;
+  // desde la colección: abre exactamente la versión guardada (p. ej. la Overframe y no la normal)
+  const want = pendingLabel; pendingLabel = null;
+  const labelOf = s => s ? `${s.set_code} · ${s.set_rarity}${s.variant ? ' · ' + s.variant : ''}` : '';
+  let idx = want ? items.findIndex(s => s && labelOf(s).toUpperCase() === String(want).toUpperCase()) : -1;
+  if (idx < 0 && cc) idx = items.findIndex(s => s && normCode(s.set_code) === cc && (!rarity || s.set_rarity === rarity) && (!variant || s.variant === variant));
   if (idx < 0 && cc) idx = items.findIndex(s => s && normCode(s.set_code) === cc && (!rarity || s.set_rarity === rarity));
   if (idx < 0 && cc) idx = items.findIndex(s => s && normCode(s.set_code) === cc);
   const locNames = await names;
   // código en el idioma de la carta para la versión buscada (LOB-EN001 -> LOB-DE001)
   const locCode = s => local?.code && s && normCode(s.set_code) === cc ? local.code : null;
-  const realLoc = s => { const lc = locCode(s); return (lc && pickScan(scans, lc, s.set_rarity)) || real(s); };
+  const realLoc = s => { const lc = locCode(s); return (lc && pickScan(scans, lc, s.set_rarity, isOF(s))) || real(s); };
   return showVersions(items, idx < 0 ? 0 : idx, async s => yugiohView(c, s, realLoc(s) || (!s && pickScan(scans, null, null)),
-      s && !locCode(s) ? scanGroup(scans, s.set_code, s.set_rarity) : [], pr, { names: locNames, lang: local?.lang, code: locCode(s) }),
+      s && !locCode(s) ? scanGroup(scans, s.set_code, s.set_rarity, isOF(s)) : [], pr, { names: locNames, lang: local?.lang, code: locCode(s) }),
     s => { const x = real(s); const i = x ? ygpThumb(x.url) : c.card_images?.[0]?.image_url_small;
-      return s ? { r: s.set_rarity, t: s.set_code + (s.variant ? ' · ' + s.variant : ''), p: s.prints?.length ? (shownPrice(s.prints)?.t || '') : (Number(s.set_price) ? '≈ ' + usd(s.set_price) : ''), n: s.prints?.length ? (shownPrice(s.prints)?.n ?? null) : (Number(s.set_price) * USD_EUR() || null), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
+      return s ? { r: s.set_rarity, of: isOF(s), t: s.set_code + (s.variant ? ' · ' + s.variant : ''), p: s.prints?.length ? (shownPrice(s.prints)?.t || '') : (Number(s.set_price) ? '≈ ' + usd(s.set_price) : ''), n: s.prints?.length ? (shownPrice(s.prints)?.n ?? null) : (Number(s.set_price) * USD_EUR() || null), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
 }
 
 function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
@@ -1739,11 +1771,12 @@ function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
   const se = chosen?.e || null; // Cardmarket manda
   const approx = !sp && set && Number(set.set_price) ? Number(set.set_price) : null; // TCGplayer no la vende: dato orientativo
   return {
+    overframe: isOF(set), ofNoScan: isOF(set) && !!scan && !scan.extra?.includes('EA'),
     img: scan?.url || c.card_images?.[0]?.image_url, replica: !scan, deepQ: loc.code || set?.set_code || c.name, name: locName || c.name, subname: locName && locName !== c.name ? c.name : '', rarity: set?.set_rarity,
     alts,
     updated: pr && ps.length ? T(se ? 'Cardmarket del {0}' : 'TCGplayer del {0}', fecha(pr.updated)) : '',
     versionLabel: set ? `${loc.code || set.set_code} · ${set.set_rarity}${set.variant ? ' · ' + set.variant : ''}` : '',
-    meta: set ? `${esc(set.set_name)} · ${esc(loc.code || set.set_code)}${set.variant ? ' · ' + esc(set.variant) : ''}` : esc(c.type),
+    meta: set ? `${esc(set.set_name)} · ${esc(loc.code || set.set_code)}${set.variant ? ' · ' + esc(ofText(set.variant)) : ''}` : esc(c.type),
     mainLabel: se ? 'Precio en Cardmarket de esta edición' : sp ? 'Precio de esta edición exacta' : approx ? 'Precio orientativo de esta edición' : set ? 'Precio de esta edición exacta' : 'Precio en Cardmarket (desde)',
     mainValue: se ? eur(se) : sp ? usd(sp) : approx ? usd(approx) : set ? '' : eur(p.cardmarket_price) || usd(p.tcgplayer_price),
     approx: se && chosen.ea ? 'Cardmarket no separa bien las versiones de esta carta en esta expansión: precio aproximado.' : approx ? 'TCGplayer no vende esta impresión; dato de YGOPRODeck, puede estar desactualizado.' : set && !sp ? 'TCGplayer no tiene precio de esta impresión ahora mismo.' : '',
@@ -1783,8 +1816,8 @@ async function openYugiohSet(name){
       const sh = s.prints ? shownPrice(s.prints) : null;
       const v = s.prints ? sh?.n ?? null : Number(s.set_price) || null;
       items.push({
-    img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${s.set_rarity}${s.variant ? ' · ' + s.variant : ''}`,
-    real: () => ygoRealImg(c, s.set_code, s.set_rarity, true),
+    img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${s.set_rarity}${s.variant ? ' · ' + (isOF(s) ? '🖼️ ' : '') + ofText(s.variant) : ''}`,
+    real: () => ygoRealImg(c, s.set_code, s.set_rarity, true, isOF(s)),
     price: sh ? sh.t : v ? '≈ ' + usd(v) : '', v, code: s.set_code,
     open: () => openYugioh(c, s.set_code.toUpperCase(), s.set_rarity, null, s.variant) });
     }
@@ -2659,7 +2692,7 @@ function colChart(cur){
   const pts = Object.keys(H).sort().filter(d => H[d][cur]).map(d => ({ l: new Date(d).toLocaleDateString(LOCALE(), { day: 'numeric', month: 'short' }), v: H[d][cur] }));
   return pts.length >= 2 ? chartHTML(pts, cur) : '';
 }
-const cardTile = (img, name, price, attrs, rank, g, pts) => `<button ${attrs}>${rank ? `<span class="rk">${rank}</span>` : ''}${g && ICONS[g] ? `<span class="gi" title="${esc(GAMES[g]?.label || '')}">${ICONS[g]}</span>` : ''}${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}<span class="nm2">${esc(name)}</span><b>${price || ''}</b>${sparkHTML(pts)}</button>`;
+const cardTile = (img, name, price, attrs, rank, g, pts, of) => `<button ${attrs}>${of ? '<span class="oft">Overframe</span>' : ''}${rank ? `<span class="rk">${rank}</span>` : ''}${g && ICONS[g] ? `<span class="gi" title="${esc(GAMES[g]?.label || '')}">${ICONS[g]}</span>` : ''}${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}<span class="nm2">${esc(name)}</span><b>${price || ''}</b>${sparkHTML(pts)}</button>`;
 // historial de una carta guardada: el de este dispositivo + el guardado en tu cuenta (sirve en todos tus dispositivos)
 function histOf(i){
   const m = {};
@@ -2721,7 +2754,7 @@ function homeHTML(){
       return last.length ? `<div class="hmedals">${last.map(([id, ico, name]) => `<span class="hmedal" title="${esc(T(name))}"><i>${ico}</i>${T(name)}</span>`).join('')}<span class="hmedal more">${ACH.filter(a => S.ach[a[0]]).length}/${ACH.length} 🎖️</span></div>` : ''; })()}
     <button class="hmore" data-go="progress">${T('Todas las misiones y logros')} ›</button></div>` : ''}
 
-  ${top.length ? `<div class="gxsec"><h3>✨ ${T('Tus cartas destacadas')} <small>${cs.cur}</small></h3><div class="top5">${top.map((i, k) => cardTile(i.img, i.name, fm(i.value, i.cur), `data-col="${esc(i.__id)}"`, k + 1, i.game, histOf(i))).join('')}</div></div>` : ''}
+  ${top.length ? `<div class="gxsec"><h3>✨ ${T('Tus cartas destacadas')} <small>${cs.cur}</small></h3><div class="top5">${top.map((i, k) => cardTile(i.img, i.name, fm(i.value, i.cur), `data-col="${esc(i.__id)}"`, k + 1, i.game, histOf(i), i.game === 'yugioh' && isOF(i.label))).join('')}</div></div>` : ''}
   ${rec.length ? `<div class="gxsec"><h3>🕒 ${T('Vistas recientemente')}</h3><div class="top5">${rec.map(r => cardTile(r.i, r.n, r.p.length ? fm(r.p.at(-1)[1], r.c) : '', `data-g="${esc(r.g)}" data-rq="${esc(r.q || r.n)}" data-s="${r.s ? 1 : 0}"`, 0, r.g, r.p)).join('')}</div></div>` : ''}
 
   <div class="gxsec"><h3>📈 ${T('Evolución del mercado')} <small>${T('cartas que sigues')}</small></h3>
@@ -3485,8 +3518,8 @@ function showMine(view, keep){
     const hit = i.target && i.value && i.value <= i.target;
     return `<div class="mrow" data-id="${esc(idOf(i))}">
       ${i.img ? `<img src="${esc(i.img)}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}
-      <div class="mi"><button class="link mopen">${esc(i.name)}</button>
-        <div class="note">${esc([i.label, groupBy === 'rarity' ? i.set : i.rarity].filter(Boolean).join(' · '))}</div>
+      <div class="mi"><button class="link mopen">${esc(i.name)}</button>${i.game === 'yugioh' && isOF(i.label) ? ' ' + OF_BADGE : ''}
+        <div class="note">${esc(ofText([i.label, groupBy === 'rarity' ? i.set : i.rarity].filter(Boolean).join(' · ')))}</div>
         <div class="note"><b>${esc(i.price || '')}</b>${window.pcSpark ? window.pcSpark(window.pcHistOf?.(i)) : ''}${ch != null ? ` <span class="${ch >= 0 ? 'up' : 'down'}">${ch >= 0 ? '▲' : '▼'}${Math.abs(ch).toFixed(1)}%</span>` : ''}
           ${i.buy != null ? ` · ${T('Compra')}: ${fmt(i.buy, i.buyCur || i.cur) || '0'}${ipl != null ? ` <span class="${ipl >= 0 ? 'up' : 'down'}">(${ipl >= 0 ? '+' : '−'}${fmt(Math.abs(ipl), i.cur) || '0'})</span>` : ''}` : ''}
           ${i.updated?.toDate ? ' · ' + T('Precio guardado el {0}. Abre la carta para actualizarlo.', i.updated.toDate().toLocaleDateString(LOCALE())) : ''}</div>
@@ -3540,7 +3573,8 @@ function openItem(i){
   mineView = null;
   if (game !== i.game) document.querySelector(`.tab[data-game="${i.game}"]`)?.click();
   $('q').value = i.q || i.name;
-  search().then(() => { backStack.push(() => showMine(from)); if (redraw) redraw(); });
+  pendingLabel = i.game === 'yugioh' ? i.label || null : null; // abre la versión guardada (Overframe o normal)
+  search().then(() => { pendingLabel = null; backStack.push(() => showMine(from)); if (redraw) redraw(); });
 }
 // al hacer una búsqueda normal se sale de la pantalla de colección
 $('form').addEventListener('submit', () => { mineView = null; });

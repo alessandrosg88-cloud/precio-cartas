@@ -210,10 +210,22 @@ function matchPrintsCardmarket(prints, cm){
   const expNames = Object.fromEntries(Object.entries(byExp).map(([e, ps]) => [e, new Set(ps.map(p => norm(p.name)))]));
   const byGroup = {};
   for (const x of prints) (byGroup[x.gid] ||= []).push(x);
-  const rarOf = p => (p.name.match(/\(V\.\d+\s*-\s*([^)]+)\)/i) || [])[1]?.trim().toLowerCase() || '';
+  // Overframe (TCGplayer: "Extended Art"). Cardmarket puede marcarlo en el nombre del producto.
+  const OF_RE = /overframe|extended art|\bEA\b/i;
+  const cmOF = p => OF_RE.test(p.name.replace(/^[^(]*/, ''));
+  const tcgOF = x => /extended art/i.test(x.n) || /extended art/i.test(x.v || '');
+  const rarOf = p => { const m = p.name.match(/\(V\.\d+\s*-\s*(.*)\)\s*$/i); if (!m) return '';
+    return m[1].replace(/\(?\s*(overframe|extended art|EA)\s*\)?/ig, ' ').replace(/[()]/g, ' ').replace(/[-\s]+$/, '').replace(/\s+/g, ' ').trim().toLowerCase(); };
   const price = p => cmPrice(cm.prices[p.idProduct]);
+  // precio de TCGplayer para comparar: el de mercado; si el mínimo es muchísimo mayor, el de mercado es un error
+  // (p. ej. Grand Master Rare con mercado 20 $ y mínimo 8500 $)
+  const tcgU = x => Math.min(...Object.values(x.p).map(([m, l]) => (m && l && l > m * 5 ? l : m || l) || Infinity));
   let n = 0, rejected = 0;
   console.log('   Ejemplos CM: ' + cm.products.filter(p => /^Dark Magician \(/.test(p.name)).slice(0, 8).map(p => p.name + ' [' + p.idExpansion + ']').join(' | '));
+  // para comprobar cómo llama Cardmarket a las Overframe
+  console.log('   Ejemplos CM Overframe: ' + cm.products.filter(p => /^(Dark Magician the Pharaoh's Servant|Cyber Dragon the Luminous Mech Dragon|Crimson Dragon Quetzalcoatl|Mirrorjade the Iceblade Dragon|Starving Venom Fusion Dragon - Four Heavenly Dragons)/i.test(p.name))
+    .map(p => `${p.name} [${p.idExpansion}] €${price(p) ?? '-'}`).join(' | '));
+  let ofN = 0, ofCm = 0;
   for (const list of Object.values(byGroup)) {
     const names = new Set(list.map(x => norm(x.n)));
     let best = null, bestScore = 0;
@@ -230,30 +242,40 @@ function matchPrintsCardmarket(prints, cm){
     for (const [k, xs] of Object.entries(tcgByName)) {
       const ps = cmByName[k]; if (!ps) continue;
       // agrupa por rareza (si Cardmarket la indica) y empareja por orden de precio dentro de cada grupo
+      // si Cardmarket marca las Overframe, la Overframe solo se empareja con Overframe y la normal con la normal
+      const cmMarks = ps.some(cmOF);
       const groups = {};
       for (const x of xs) {
-        const withR = ps.filter(p => rarOf(p) === x.r.toLowerCase());
-        const key = withR.length ? x.r.toLowerCase() : '*';
-        (groups[key] ||= { xs: [], ps: withR.length ? withR : ps }).xs.push(x);
+        const of = tcgOF(x);
+        const pool = cmMarks ? ps.filter(p => cmOF(p) === of) : ps;
+        const withR = pool.filter(p => rarOf(p) === x.r.toLowerCase());
+        const key = (withR.length ? x.r.toLowerCase() : '*') + (cmMarks && of ? '|of' : '');
+        (groups[key] ||= { xs: [], ps: withR.length ? withR : pool }).xs.push(x);
       }
       for (const { xs: gx, ps: gp } of Object.values(groups)) {
-        const a = [...gx].sort((u, v) => (Math.min(...Object.values(u.p).map(q => q[0] || Infinity)) - Math.min(...Object.values(v.p).map(q => q[0] || Infinity))));
+        const a = [...gx].sort((u, v) => tcgU(u) - tcgU(v));
         const b = [...gp].filter(p => price(p)).sort((u, v) => price(u) - price(v));
         if (!b.length) continue;
         if (k === 'dark magician') console.log(`   [DM] ${list[0].g}: TCG ${a.map(x => x.r + (x.v ? '/' + x.v : '') + ' $' + Object.values(x.p).map(q => q[0]).join('/')).join(', ')} || CM ${b.map(p => p.idProduct + ' ' + p.name + ' €' + price(p)).join(', ')}`);
-        const same = a.length === b.length;
+        const same = a.length === b.length, used = new Set();
         a.forEach((x, i) => {
-          const u = Math.min(...Object.values(x.p).map(q => q[0] || Infinity));
-          // mismo nº de versiones: por orden de precio; si no, la de precio más parecido (aproximado)
-          const pr = same ? b[i] : !isFinite(u) ? null : [...b].sort((p, q) => Math.abs(Math.log(price(p) / (u * 0.92))) - Math.abs(Math.log(price(q) / (u * 0.92))))[0];
+          const u = tcgU(x);
+          // mismo nº de versiones: por orden de precio; si no, la de precio más parecido (aproximado),
+          // sin usar dos veces el mismo producto (la Overframe no puede quedarse el precio de otra versión)
+          const pr = same ? b[i] : !isFinite(u) ? null : b.filter(p => !used.has(p)).sort((p, q) => Math.abs(Math.log(price(p) / (u * 0.92))) - Math.abs(Math.log(price(q) / (u * 0.92))))[0];
           if (!pr) return;
+          used.add(pr);
           const pg = cm.prices[pr.idProduct], e = price(pr);
           if (isFinite(u) && Math.max(e, u) > 3 && (e / u > 3 || e / u < 0.33)) { rejected++; return; }
-          x.cm = pr.idProduct; x.e = r2(e); x.el = r2(pg.low); x.e30 = r2(pg.avg30); x.e1 = r2(pg.avg1); x.e7 = r2(pg.avg7); if (!same || a.length > 1) x.ea = 1; n++;
+          x.cm = pr.idProduct; x.e = r2(e); x.el = r2(pg.low); x.e30 = r2(pg.avg30); x.e1 = r2(pg.avg1); x.e7 = r2(pg.avg7);
+          // aproximado solo si no se sabe seguro qué producto es (Cardmarket marca la rareza y la Overframe y hay uno solo)
+          if (!same || a.length > 1) x.ea = 1; n++;
         });
       }
     }
   }
+  for (const x of prints) if (tcgOF(x)) { ofN++; if (x.cm) ofCm++; }
+  console.log(`   Overframe: ${ofN} impresiones, ${ofCm} con precio de Cardmarket`);
   return `${n} (descartadas por precio dudoso: ${rejected})`;
 }
 
