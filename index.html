@@ -122,6 +122,9 @@ window.PC_BG = /[?&]bg=1\b/.test(location.search) && window.parent !== window;</
     background:linear-gradient(90deg,#ffd76a,#ff9de2,#9ad8ff)}
   .rar.ofr{color:#1b1030;background:linear-gradient(90deg,#ffd76a,#ff9de2,#9ad8ff)}
   .chip.ofc{border-color:#e0a3ff}
+  .ofrib.gmr,.oft.gmr,.gmrb,.rar.gmrr{color:#2a1a00;background:linear-gradient(90deg,#fff1a8,#f2b632,#c98a12)}
+  .gmrb{display:inline-block;vertical-align:middle;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:800}
+  .tile.gmr,.chip.gmrc{border-color:#f2b632}
   .top5 .oft{top:24px}
   .ofnote{font-size:12.5px;color:var(--muted);margin:-4px 0 12px}
   .pic img{width:100%;border-radius:10px;display:block;min-height:120px;background:var(--line)}
@@ -1003,17 +1006,17 @@ function drawPicker(){
       <button class="chip${i === kMin ? ' on' : ''}" id="vmin">🪙 ${T('La más barata')} · ${labels[kMin].p || ''}</button></div>` : ''}
     <p class="lbl2">${filtered ? T('{0} de {1} versiones', ks.length, n) + ` <button class="link vclear" id="vclear">✕ ${T('Quitar filtros')}</button>` : T('Desliza para ver todas las versiones ({0})', n)}</p>
     ${ks.length ? `<div class="rail" id="rail">${ks.map(k => { const l = labels[k];
-      return `<button class="tile${k === i ? ' on' : ''}${l.rep ? ' rep' : ''}${l.of ? ' of' : ''}" data-k="${k}" title="${esc(ofText([l.t, l.r].filter(Boolean).join(' · ')))}">
-        ${l.of ? '<span class="oft">Overframe</span>' : ''}${l.i ? `<img src="${l.i}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}
+      return `<button class="tile${k === i ? ' on' : ''}${l.rep ? ' rep' : ''}${l.of ? ' of' : ''}${l.gmr ? ' gmr' : ''}" data-k="${k}" title="${esc(ofText([l.t, l.r].filter(Boolean).join(' · ')))}">
+        ${l.of ? '<span class="oft">Overframe</span>' : l.gmr ? '<span class="oft gmr">GMR</span>' : ''}${l.i ? `<img src="${l.i}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}
         <span class="tr">${esc(l.r || '—')}</span><span class="tp">${l.p || '·'}</span></button>`; }).join('')}</div>`
       : `<p class="note">${T('Ninguna versión coincide con el filtro.')}</p>`}
     ${rars.length > 1 || nOF ? `<p class="lbl2">${T('Todas las rarezas de esta carta ({0})', rars.length)}</p>
       ${rars.length <= 24 ? `<div class="chips"><button class="chip${!vf.rar ? ' on' : ''}" data-r="">${T('Todas')}</button>${nOF ? `<button class="chip ofc${vf.rar === '__of' ? ' on' : ''}" data-r="__of">🖼️ Overframe<small>×${nOF}</small></button>` : ''}${rars.map(x =>
-        `<button class="chip${x.r === vf.rar ? ' on' : ''}" data-r="${esc(x.r)}">${esc(x.r)}${x.count > 1 ? `<small>×${x.count}</small>` : ''}</button>`).join('')}</div>`
+        `<button class="chip${x.r === vf.rar ? ' on' : ''}${isGMR(x.r) ? ' gmrc' : ''}" data-r="${esc(x.r)}">${isGMR(x.r) ? '🏆 ' : ''}${esc(x.r)}${x.count > 1 ? `<small>×${x.count}</small>` : ''}</button>`).join('')}</div>`
       : `<select id="vrar"><option value="">${T('Todas')}</option>${nOF ? `<option value="__of"${vf.rar === '__of' ? ' selected' : ''}>🖼️ Overframe</option>` : ''}${rars.map(x => `<option${x.r === vf.rar ? ' selected' : ''}>${esc(x.r)}</option>`).join('')}</select>`}` : ''}
     <p class="lbl2">${T('Elige la versión')}</p>
     <select id="vsel">${(ks.includes(i) ? ks : [i, ...ks]).map(k => { const l = labels[k];
-      return `<option value="${k}"${k === i ? ' selected' : ''}>${k + 1}. ${l.of ? '🖼️ ' : ''}${esc(ofText([l.t, l.r && !String(l.t).includes(l.r) ? l.r : ''].filter(Boolean).join(' · ')))}${l.p ? ' — ' + l.p : ''}</option>`; }).join('')}</select>`;
+      return `<option value="${k}"${k === i ? ' selected' : ''}>${k + 1}. ${l.of ? '🖼️ ' : l.gmr ? '🏆 ' : ''}${esc(ofText([l.t, l.r && !String(l.t).includes(l.r) ? l.r : ''].filter(Boolean).join(' · ')))}${l.p ? ' — ' + l.p : ''}</option>`; }).join('')}</select>`;
   const setRar = r => {
     vf.rar = r;
     const inR = k => rarOk(labels[k], r);
@@ -1077,13 +1080,13 @@ function render(v){
     <div class="result" id="result">
       <div class="pic">
         <img src="${v.img || NOIMG}" alt="${esc(v.name)}"${slideDir ? ` class="slide${slideDir > 0 ? 'R' : 'L'}"` : ''}>
-        ${v.overframe ? '<span class="ofrib">🖼️ Overframe</span>' : ''}
+        ${v.overframe ? '<span class="ofrib">🖼️ Overframe</span>' : v.gmr ? '<span class="ofrib gmr">🏆 Grand Master Rare</span>' : ''}
         ${v.alts ? `<div class="alts"><p class="replica">${T('Con este código se imprimieron varias versiones. Toca la tuya:')}</p><div class="altrow">${v.alts.map((a, k) =>
           `<button class="alt${k === 0 ? ' on' : ''}" data-k="${k}"><img src="${ygpThumb(a.url)}" alt="" loading="lazy"><span>${esc(a.label)}</span></button>`).join('')}</div></div>` : ''}
         ${v.replica ? `<p class="replica">${T('⚠️ No hay foto de esta impresión oficial: la imagen es solo de referencia (réplica de YGOPRODeck, «Not For Use in Sanctioned Tournaments»).')}</p>` : ''}
         ${n > 1 ? `<div class="nav">
             <button class="arrow" id="prev" aria-label="${T('Versión anterior')}">‹</button>
-            <div class="vlabel"><b>${T('Versión {0} de {1}', i + 1, n)}</b>${v.overframe ? '🖼️ ' : ''}${esc(ofText(v.versionLabel || v.rarity || ''))}</div>
+            <div class="vlabel"><b>${T('Versión {0} de {1}', i + 1, n)}</b>${v.overframe ? '🖼️ ' : v.gmr ? '🏆 ' : ''}${esc(ofText(v.versionLabel || v.rarity || ''))}</div>
             <button class="arrow" id="next" aria-label="${T('Versión siguiente')}">›</button>
           </div>${dots}` : ''}
       </div>
@@ -1091,7 +1094,8 @@ function render(v){
         <p class="name">${esc(v.name)}</p>
         ${v.subname ? `<p class="meta">${esc(v.subname)}</p>` : ''}
         <p class="meta">${v.meta}</p>
-        ${v.rarity ? `<span class="rar">✦ ${esc(v.rarity)}</span>` : ''}${v.overframe ? ` <span class="rar ofr">🖼️ Overframe</span>` : ''}
+        ${v.rarity ? `<span class="rar">✦ ${esc(v.rarity)}</span>` : ''}${v.overframe ? ` <span class="rar ofr">🖼️ Overframe</span>` : ''}${v.gmr ? ` <span class="rar gmrr">🏆 GMR</span>` : ''}
+        ${v.gmr ? `<p class="ofnote">${T('Grand Master Rare: tirada muy corta con número de serie. Casi no hay ventas, así que a veces no hay precio público. Puedes añadirla igual a tu colección y poner tu precio de compra con ✏️.')}</p>` : ''}
         ${v.overframe ? `<p class="ofnote">${T('Versión Overframe (Extended Art): el dibujo sale del marco. Tiene un precio distinto al de la versión normal.')}${v.ofNoScan ? ' ' + T('Yugipedia aún no tiene foto de la versión Overframe: la imagen es la de la normal.') : ''}</p>` : ''}
         <div class="big"><div class="lbl">${T(v.mainLabel)}</div><div class="val">${v.mainValue || T('Sin precio')}</div>
           ${v.approx ? `<div class="approx">${T(v.approx)}</div>` : ''}
@@ -1495,7 +1499,7 @@ const RAR_ABBR = { 'Common': ['C', 'SP'], 'Short Print': ['SP', 'C'], 'Rare': ['
   'Duel Terminal Normal Parallel Rare': ['DNPR'], 'Duel Terminal Super Parallel Rare': ['DSPR'], 'Duel Terminal Ultra Parallel Rare': ['DUPR'],
   'Duel Terminal Normal Rare Parallel Rare': ['DNRPR'], 'Duel Terminal Rare Parallel Rare': ['DRPR'],
   'Normal Parallel Rare': ['NPR'], 'Super Parallel Rare': ['SPR'], 'Ultra Parallel Rare': ['UPR'], 'Ultra Rare (Pharaoh\'s Rare)': ['URPR'],
-  '10000 Secret Rare': ['10000ScR'], 'Ghost Secret Rare': ['GScR'],
+  '10000 Secret Rare': ['10000ScR'], 'Ghost Secret Rare': ['GScR'], 'Grand Master Rare': ['GMR'],
   // nombres que usa TCGplayer
   "Prismatic Collector's Rare": ['PCR', 'CR'], 'Prismatic Ultimate Rare': ['PUR', 'UtR'], 'Starfoil Rare': ['SFR'], 'Starfoil': ['SFR'],
   'Parallel Rare': ['NPR', 'SPR', 'UPR', 'PR'], 'Duel Terminal Technology Common': ['DNPR', 'C'], 'Duel Terminal Technology Ultra Rare': ['DUPR', 'UR'],
@@ -1648,6 +1652,9 @@ const ygoShard = n => ygoNorm(n).replace(/ /g, '').slice(0, 2).padEnd(2, '_');
 const isOF = s => /extended art|overframe/i.test(typeof s === 'string' ? s : s?.variant || '');
 const ofText = t => String(t || '').replace(/Extended Art/g, 'Overframe');
 const OF_BADGE = '<span class="ofb" title="Overframe (Extended Art): el dibujo sale del marco">🖼️ Overframe</span>';
+// Grand Master Rare: tirada muy corta con número de serie
+const isGMR = s => /grand master rare/i.test(typeof s === 'string' ? s : s?.set_rarity || s?.rarity || '');
+const GMR_BADGE = '<span class="gmrb" title="Grand Master Rare: tirada muy corta con número de serie">🏆 Grand Master Rare</span>';
 let pendingLabel = null; // versión guardada en la colección que hay que abrir (ver openItem)
 const printCache = {};
 async function ygoPrints(name){
@@ -1689,7 +1696,9 @@ function ygoVersions(c, pr){
 const versionPrice = s => { const v = (s?.prints || []).map(printPrice).filter(Boolean); return v.length ? Math.min(...v) : null; };
 // Precio a mostrar: Cardmarket (€) si lo hay; si no, TCGplayer ($). { t: texto, n: número aprox. en € para ordenar }
 const shownPrice = prints => {
-  const e = (prints || []).map(x => x.e).filter(Boolean);
+  // Grand Master Rare: si el € de Cardmarket no se parece al $ de TCGplayer, era el precio de otra versión
+  const okE = x => { if (!x.e || !isGMR(x.r)) return !!x.e; const u = printPrice(x); return !u || (x.e / u <= 3 && x.e / u >= 0.2); };
+  const e = (prints || []).filter(okE).map(x => x.e);
   if (e.length) { const v = Math.min(...e); return { t: ((prints || []).some(x => x.ea) ? '~' : '') + eur(v), n: v, e: true }; }
   const u = (prints || []).map(printPrice).filter(Boolean);
   return u.length ? { t: usd(Math.min(...u)), n: Math.min(...u) * USD_EUR() } : null;
@@ -1703,7 +1712,8 @@ function printsFor(pr, s){
   return r.length ? r : (same.length && new Set(same.map(e => e.r)).size === 1 ? same : []);
 }
 // precio de mercado más bajo entre sus ediciones (1st Edition, Unlimited…)
-const printPrice = e => { const v = Object.values(e?.p || {}).map(x => x[0]).filter(Boolean); return v.length ? Math.min(...v) : null; };
+// (si el mínimo es muchísimo mayor que el de mercado, el de mercado es un error: pasa con las Grand Master Rare)
+const printPrice = e => { const v = Object.values(e?.p || {}).map(([m, l]) => m && l && l > m * 5 ? l : m || l).filter(Boolean); return v.length ? Math.min(...v) : null; };
 const is25 = e => /25th Anniversary/i.test(e?.g || '');
 const ED_TCG = { '1st Edition': '1ª edición', 'Unlimited': 'Edición ilimitada', 'Limited': 'Edición limitada' };
 
@@ -1733,7 +1743,7 @@ async function openYugioh(c, code, rarity, local = null, variant = null){
   return showVersions(items, idx < 0 ? 0 : idx, async s => yugiohView(c, s, realLoc(s) || (!s && pickScan(scans, null, null)),
       s && !locCode(s) ? scanGroup(scans, s.set_code, s.set_rarity, isOF(s)) : [], pr, { names: locNames, lang: local?.lang, code: locCode(s) }),
     s => { const x = real(s); const i = x ? ygpThumb(x.url) : c.card_images?.[0]?.image_url_small;
-      return s ? { r: s.set_rarity, of: isOF(s), t: s.set_code + (s.variant ? ' · ' + s.variant : ''), p: s.prints?.length ? (shownPrice(s.prints)?.t || '') : (Number(s.set_price) ? '≈ ' + usd(s.set_price) : ''), n: s.prints?.length ? (shownPrice(s.prints)?.n ?? null) : (Number(s.set_price) * USD_EUR() || null), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
+      return s ? { r: s.set_rarity, of: isOF(s), gmr: isGMR(s), t: s.set_code + (s.variant ? ' · ' + s.variant : ''), p: s.prints?.length ? (shownPrice(s.prints)?.t || '') : (Number(s.set_price) ? '≈ ' + usd(s.set_price) : ''), n: s.prints?.length ? (shownPrice(s.prints)?.n ?? null) : (Number(s.set_price) * USD_EUR() || null), i, rep: !x } : { r: '', t: c.name, i, rep: !x }; });
 }
 
 function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
@@ -1768,10 +1778,11 @@ function yugiohView(c, set, scan, group = [], pr = null, loc = {}){
     ['Cardmarket (la edición más barata)', eur(p.cardmarket_price)], ['TCGplayer', usd(p.tcgplayer_price)],
     ['eBay', usd(p.ebay_price)], ['Amazon', usd(p.amazon_price)], ['CoolStuffInc', usd(p.coolstuffinc_price)]);
   const sp = chosen ? printPrice(chosen) : null;
-  const se = chosen?.e || null; // Cardmarket manda
+  let se = chosen?.e || null; // Cardmarket manda
+  if (se && isGMR(set) && sp && (se / sp > 3 || se / sp < 0.2)) se = null; // emparejamiento dudoso con otra versión
   const approx = !sp && set && Number(set.set_price) ? Number(set.set_price) : null; // TCGplayer no la vende: dato orientativo
   return {
-    overframe: isOF(set), ofNoScan: isOF(set) && !!scan && !scan.extra?.includes('EA'),
+    gmr: isGMR(set), overframe: isOF(set), ofNoScan: isOF(set) && !!scan && !scan.extra?.includes('EA'),
     img: scan?.url || c.card_images?.[0]?.image_url, replica: !scan, deepQ: loc.code || set?.set_code || c.name, name: locName || c.name, subname: locName && locName !== c.name ? c.name : '', rarity: set?.set_rarity,
     alts,
     updated: pr && ps.length ? T(se ? 'Cardmarket del {0}' : 'TCGplayer del {0}', fecha(pr.updated)) : '',
@@ -1816,7 +1827,7 @@ async function openYugiohSet(name){
       const sh = s.prints ? shownPrice(s.prints) : null;
       const v = s.prints ? sh?.n ?? null : Number(s.set_price) || null;
       items.push({
-    img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${s.set_rarity}${s.variant ? ' · ' + (isOF(s) ? '🖼️ ' : '') + ofText(s.variant) : ''}`,
+    img: c.card_images?.[0]?.image_url_small, title: c.name, sub: `${s.set_code} · ${isGMR(s) ? '🏆 ' : ''}${s.set_rarity}${s.variant ? ' · ' + (isOF(s) ? '🖼️ ' : '') + ofText(s.variant) : ''}`,
     real: () => ygoRealImg(c, s.set_code, s.set_rarity, true, isOF(s)),
     price: sh ? sh.t : v ? '≈ ' + usd(v) : '', v, code: s.set_code,
     open: () => openYugioh(c, s.set_code.toUpperCase(), s.set_rarity, null, s.variant) });
@@ -2692,7 +2703,7 @@ function colChart(cur){
   const pts = Object.keys(H).sort().filter(d => H[d][cur]).map(d => ({ l: new Date(d).toLocaleDateString(LOCALE(), { day: 'numeric', month: 'short' }), v: H[d][cur] }));
   return pts.length >= 2 ? chartHTML(pts, cur) : '';
 }
-const cardTile = (img, name, price, attrs, rank, g, pts, of) => `<button ${attrs}>${of ? '<span class="oft">Overframe</span>' : ''}${rank ? `<span class="rk">${rank}</span>` : ''}${g && ICONS[g] ? `<span class="gi" title="${esc(GAMES[g]?.label || '')}">${ICONS[g]}</span>` : ''}${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}<span class="nm2">${esc(name)}</span><b>${price || ''}</b>${sparkHTML(pts)}</button>`;
+const cardTile = (img, name, price, attrs, rank, g, pts, of) => `<button ${attrs}>${of ? `<span class="oft${of === 'gmr' ? ' gmr' : ''}">${of === 'gmr' ? 'GMR' : 'Overframe'}</span>` : ''}${rank ? `<span class="rk">${rank}</span>` : ''}${g && ICONS[g] ? `<span class="gi" title="${esc(GAMES[g]?.label || '')}">${ICONS[g]}</span>` : ''}${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}<span class="nm2">${esc(name)}</span><b>${price || ''}</b>${sparkHTML(pts)}</button>`;
 // historial de una carta guardada: el de este dispositivo + el guardado en tu cuenta (sirve en todos tus dispositivos)
 function histOf(i){
   const m = {};
@@ -2754,7 +2765,7 @@ function homeHTML(){
       return last.length ? `<div class="hmedals">${last.map(([id, ico, name]) => `<span class="hmedal" title="${esc(T(name))}"><i>${ico}</i>${T(name)}</span>`).join('')}<span class="hmedal more">${ACH.filter(a => S.ach[a[0]]).length}/${ACH.length} 🎖️</span></div>` : ''; })()}
     <button class="hmore" data-go="progress">${T('Todas las misiones y logros')} ›</button></div>` : ''}
 
-  ${top.length ? `<div class="gxsec"><h3>✨ ${T('Tus cartas destacadas')} <small>${cs.cur}</small></h3><div class="top5">${top.map((i, k) => cardTile(i.img, i.name, fm(i.value, i.cur), `data-col="${esc(i.__id)}"`, k + 1, i.game, histOf(i), i.game === 'yugioh' && isOF(i.label))).join('')}</div></div>` : ''}
+  ${top.length ? `<div class="gxsec"><h3>✨ ${T('Tus cartas destacadas')} <small>${cs.cur}</small></h3><div class="top5">${top.map((i, k) => cardTile(i.img, i.name, fm(i.value, i.cur), `data-col="${esc(i.__id)}"`, k + 1, i.game, histOf(i), i.game === 'yugioh' && (isOF(i.label) || (isGMR(i.rarity || i.label) && 'gmr')))).join('')}</div></div>` : ''}
   ${rec.length ? `<div class="gxsec"><h3>🕒 ${T('Vistas recientemente')}</h3><div class="top5">${rec.map(r => cardTile(r.i, r.n, r.p.length ? fm(r.p.at(-1)[1], r.c) : '', `data-g="${esc(r.g)}" data-rq="${esc(r.q || r.n)}" data-s="${r.s ? 1 : 0}"`, 0, r.g, r.p)).join('')}</div></div>` : ''}
 
   <div class="gxsec"><h3>📈 ${T('Evolución del mercado')} <small>${T('cartas que sigues')}</small></h3>
@@ -3518,7 +3529,7 @@ function showMine(view, keep){
     const hit = i.target && i.value && i.value <= i.target;
     return `<div class="mrow" data-id="${esc(idOf(i))}">
       ${i.img ? `<img src="${esc(i.img)}" alt="" loading="lazy">` : '<span class="noimg">🃏</span>'}
-      <div class="mi"><button class="link mopen">${esc(i.name)}</button>${i.game === 'yugioh' && isOF(i.label) ? ' ' + OF_BADGE : ''}
+      <div class="mi"><button class="link mopen">${esc(i.name)}</button>${i.game === 'yugioh' && isOF(i.label) ? ' ' + OF_BADGE : ''}${i.game === 'yugioh' && isGMR(i.rarity || i.label) ? ' ' + GMR_BADGE : ''}
         <div class="note">${esc(ofText([i.label, groupBy === 'rarity' ? i.set : i.rarity].filter(Boolean).join(' · ')))}</div>
         <div class="note"><b>${esc(i.price || '')}</b>${window.pcSpark ? window.pcSpark(window.pcHistOf?.(i)) : ''}${ch != null ? ` <span class="${ch >= 0 ? 'up' : 'down'}">${ch >= 0 ? '▲' : '▼'}${Math.abs(ch).toFixed(1)}%</span>` : ''}
           ${i.buy != null ? ` · ${T('Compra')}: ${fmt(i.buy, i.buyCur || i.cur) || '0'}${ipl != null ? ` <span class="${ipl >= 0 ? 'up' : 'down'}">(${ipl >= 0 ? '+' : '−'}${fmt(Math.abs(ipl), i.cur) || '0'})</span>` : ''}` : ''}
